@@ -31,9 +31,11 @@ DR_List *get_data_repositories_info() {
     return list;
 }
 
+
 int main(int argc, char const *argv[]) {
     printf("Start reading configuration file...\n");
     DR_List *list = get_data_repositories_info();
+    printf("List size: %d\n", list->size);
     print_list(list);
     return 0;
 }

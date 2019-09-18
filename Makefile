@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS= -Wall -Werror -Wextra -pedantic
+CFLAGS= #-Wall -Werror -Wextra -pedantic
 OPT = -O0
 LDFLAGS = -ggdb -lpthread
 PFLAGS= -pg # used just for debug

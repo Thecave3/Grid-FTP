@@ -24,11 +24,11 @@ DR_List *new_list();
 
 Node *new_node(int id, char *ip);
 
-void *print_list(DR_List *list);
+void print_list(DR_List *list);
 
-void *append_to_list(DR_List *list, Node *node);
+void append_to_list(DR_List *list, Node *node);
 
-void *append_node(Node *head, Node *new_node);
+void append_node(Node *head, Node *new_node);
 
 
 #endif //GRID_FTP_DR_LIST_H

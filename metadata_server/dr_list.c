@@ -12,11 +12,12 @@ DR_List *new_list() {
     return list;
 }
 
-void *print_list(DR_List *list) {
-    printf("Printlist");
-    for (Node *node = list->node; node->next != NULL; node = node->next)
+void print_list(DR_List *list) {
+    Node *node = list->node;
+    while (node) {
         printf("id:%d, ip: %s\n", node->id, node->ip);
-
+        node = node->next;
+    }
 }
 
 
@@ -28,18 +29,19 @@ Node *new_node(int id, char *ip) {
     return node;
 }
 
-void *append_to_list(DR_List *list, Node *node) {
-    Node *head = list->node;
+void append_to_list(DR_List *list, Node *node) {
     list->size++;
-    if (head == NULL)
-        return head = node;
-    else
-        return append_node(head, node);
+    if (list->node == NULL) {
+        list->node = node;
+        return;
+    } else
+        return append_node(list->node, node);
 }
 
-void *append_node(Node *head, Node *new_node) {
+void append_node(Node *head, Node *new_node) {
     if (head->next == NULL) {
-        return head->next = new_node;
+        head->next = new_node;
+        return;
     }
     return append_node(head->next, new_node);
 }
