@@ -6,7 +6,6 @@
 #define GRID_FTP_UTILS_H
 
 #include "colors.h"
-#include "hash_map.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>

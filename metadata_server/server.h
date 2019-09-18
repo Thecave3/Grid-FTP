@@ -6,10 +6,11 @@
 #define GRID_FTP_SERVER_H
 
 #include "../utils/common.h"
+#include "dr_list.h"
 
 #define DATAREP_FILE_PATH "./rep.conf"
 #define CNFG_DELIM ","
 
-char **get_data_repositories_info();
+DR_List *get_data_repositories_info();
 
 #endif // GRID_FTP_SERVER_H

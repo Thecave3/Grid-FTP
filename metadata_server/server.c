@@ -4,10 +4,7 @@
 
 #include "server.h"
 
-/**
- * 
- */
-char **get_data_repositories_info() {
+DR_List *get_data_repositories_info() {
     FILE *fp;
     char data_info[BUFSIZ];
     if ((fp = fopen(DATAREP_FILE_PATH, "r")) == NULL) {
@@ -16,24 +13,27 @@ char **get_data_repositories_info() {
                 DATAREP_FILE_PATH, KNRM);
         exit(EXIT_FAILURE);
     }
-
-    int nr_rep;
+    DR_List *list = new_list();
+    int id_rep;
     char *ip_rep;
+
     while (fgets(data_info, sizeof(data_info), fp) != NULL &&
            strlen(data_info) > 1) {
-        nr_rep = strtol(strtok(data_info, CNFG_DELIM), NULL, 10);
+        id_rep = (int) strtol(strtok(data_info, CNFG_DELIM), NULL, 10);
         ip_rep = strtok(NULL, CNFG_DELIM);
         ip_rep[strlen(ip_rep) - 1] = 0;
         if (DEBUG)
-            printf("repository numero %d, ip: %s\n", nr_rep, ip_rep);
+            printf("Repository number %d, ip: %s\n", id_rep, ip_rep);
+        append_to_list(list, new_node(id_rep, ip_rep));
     }
 
     fclose(fp);
-    return NULL;
+    return list;
 }
 
-int main(/*int argc, char const *argv[]*/) {
+int main(int argc, char const *argv[]) {
     printf("Start reading configuration file...\n");
-    get_data_repositories_info();
+    DR_List *list = get_data_repositories_info();
+    print_list(list);
     return 0;
 }
