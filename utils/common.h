@@ -6,10 +6,20 @@
 #define GRID_FTP_UTILS_H
 
 #include "colors.h"
-#include <errno.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <errno.h>
 #include <string.h>
+#include <stdlib.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <pthread.h>
 
 #define TRUE 1
 #define FALSE 0
@@ -29,9 +39,9 @@
   GENERIC_ERROR_HELPER((ret != 0), ret, msg)
 
 void clear_screen() {
-  printf("%s\033[1;1H\033[2J\n", KNRM);
-  printf(">> ");
-  ERROR_HELPER(fflush(stdout), "Errore fflush");
+    printf("%s\033[1;1H\033[2J\n", KNRM);
+    printf(">> ");
+    ERROR_HELPER(fflush(stdout), "Errore fflush");
 }
 
 #endif // GRID_FTP_UTILS_H

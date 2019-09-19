@@ -11,6 +11,7 @@
 typedef struct Node {
     int id;
     char *ip;
+    u_int16_t port;
     struct Node *next;
 } Node;
 
@@ -22,7 +23,7 @@ typedef struct DR_List {
 
 DR_List *new_list();
 
-Node *new_node(int id, char *ip);
+Node *new_node(int id, char *ip, u_int16_t port);
 
 void print_list(DR_List *list);
 

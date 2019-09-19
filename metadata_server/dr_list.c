@@ -4,7 +4,6 @@
 
 #include "dr_list.h"
 
-
 DR_List *new_list() {
     DR_List *list = (DR_List *) malloc(sizeof(DR_List));
     list->size = 0;
@@ -13,18 +12,20 @@ DR_List *new_list() {
 }
 
 void print_list(DR_List *list) {
-    Node *node = list->node;
-    while (node) {
-        printf("id:%d, ip: %s\n", node->id, node->ip);
-        node = node->next;
-    }
+    printf("************************\n");
+
+    for (Node *node = list->node; node; node = node->next)
+        printf("Repository number %d, ip: %s, port: %hu\n", node->id, node->ip, node->port);
+
+    printf("************************\n");
 }
 
 
-Node *new_node(int id, char *ip) {
+Node *new_node(int id, char *ip, u_int16_t port) {
     Node *node = (Node *) malloc(sizeof(Node));
     node->id = id;
     node->ip = ip;
+    node->port = (u_int16_t) port;
     node->next = NULL;
     return node;
 }
