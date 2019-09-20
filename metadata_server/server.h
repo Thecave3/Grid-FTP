@@ -11,6 +11,11 @@
 #define DATAREP_FILE_PATH "./rep.conf"
 #define CNFG_FILE_DEL ","
 
+#define SERVER_PORT 3000
+
 DR_List *get_data_repositories_info();
+
+void server_routine();
+
 
 #endif // GRID_FTP_SERVER_H

@@ -13,10 +13,9 @@ DR_List *new_list() {
 
 void print_list(DR_List *list) {
     printf("************************\n");
-
+    printf("Repository list:\n");
     for (Node *node = list->node; node; node = node->next)
         printf("Repository number %d, ip: %s, port: %hu\n", node->id, node->ip, node->port);
-
     printf("************************\n");
 }
 

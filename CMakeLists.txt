@@ -14,19 +14,22 @@ add_executable(Grid_FTP_Server
         metadata_server/dr_list.c
         metadata_server/dr_list.h
         utils/colors.h
-        utils/common.h)
+        utils/common.h
+        utils/protocol.h utils/protocol.c utils/error_helper.h)
 
 add_executable(Grid_FTP_Client
         client/client.c
         client/client.h
         utils/colors.h
-        utils/common.h)
+        utils/common.h
+        utils/protocol.h utils/protocol.c utils/error_helper.h)
 
 add_executable(Grid_FTP_Repository
         data_repository/data_repository.c
         data_repository/data_repository.h
         utils/colors.h
-        utils/common.h)
+        utils/common.h
+        utils/protocol.h utils/protocol.c utils/error_helper.h)
 
 
 #find_package(Doxygen)
