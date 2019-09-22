@@ -34,12 +34,12 @@ DR_List *get_data_repositories_info() {
 
 int start_connection_with_dr(Node *pNode) {
     printf("Starting connection with node %d at %s:%u\n", pNode->id, pNode->ip, pNode->port);
-    int ret, sock;
+    int ret;
     struct sockaddr_in repo_addr = {};
 
     // Socket creation
-    int socket_desc = socket(AF_INET, SOCK_STREAM, 0);
-    ERROR_HELPER(socket_desc, "Error in socket creation", TRUE);
+    int sock_d = socket(AF_INET, SOCK_STREAM, 0);
+    ERROR_HELPER(sock_d, "Error in socket creation", TRUE);
 
     // Set up connection parameters
     repo_addr.sin_addr.s_addr = inet_addr(pNode->ip);
@@ -47,23 +47,29 @@ int start_connection_with_dr(Node *pNode) {
     repo_addr.sin_port = htons(pNode->port);
 
     // Connection
-    ret = connect(socket_desc, (struct sockaddr *) &repo_addr, sizeof(struct sockaddr_in));
+    ret = connect(sock_d, (struct sockaddr *) &repo_addr, sizeof(struct sockaddr_in));
     if (ret < 0) {
         fprintf(stderr, "Node %d is offline probably.", pNode->id);
         return ret;
     }
-    sock = ret;
 
     // TODO Authentication phase
     // TODO get updated allocation map from each repository
     char buf[BUFSIZ];
-    memset(buf, 0, BUFSIZ); // just clean the buffer and make sure no strange things is inside
+    memset(buf, 0, BUFSIZ); // just clean the buffer and make sure no strange things are inside
     strncpy(buf, DR_UPDATE_MAP, strlen(DR_UPDATE_MAP));
-    send_message(sock, buf);
-    recv_message(sock, buf);
-    printf("%s", buf);
+    send_message(sock_d, buf, strlen(DR_UPDATE_MAP));
+    recv_message(sock_d, buf);
 
-    return sock;
+    if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
+        printf("He said yes");
+    } else if (strncmp(buf, NOK_RESPONSE, strlen(NOK_RESPONSE)) == 0) {
+        fprintf(stderr, "Node %d refused the command \"%s\"", pNode->id, DR_UPDATE_MAP);
+    } else {
+        fprintf(stderr, "Unexpected response from node %d : %s", pNode->id, buf);
+    }
+
+    return sock_d;
 }
 
 int main(int argc, char const *argv[]) {
@@ -72,7 +78,6 @@ int main(int argc, char const *argv[]) {
 
     printf("Start reading configuration file...\n");
     DR_List *list = get_data_repositories_info();
-//    print_list(list);
     int dr_socks[list->size];
     int i = 0;
 
@@ -109,11 +114,9 @@ void server_routine() {
     printf("Begin server routine\n");
 
     while (server_on) {
-
         memset(&client_addr, 0, sizeof(client_addr));
         client_sock = accept(server_sock, (struct sockaddr *) &client_addr, (socklen_t *) &client_addr_len);
         if (client_sock < 0) continue;
-
         printf("client connected");
 
     }

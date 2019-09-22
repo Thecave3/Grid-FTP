@@ -19,10 +19,10 @@
 #include <errno.h>
 
 
-#define OK "ack"
-#define NOK "nack"
+#define OK_RESPONSE "ack"
+#define NOK_RESPONSE "nack"
 
-#define DR_UPDATE_MAP "update_map"
+#define DR_UPDATE_MAP "update_map\n"
 
 #define CLIENT_AUTH "auth"
 #define GET_DR "get_dr"
@@ -33,8 +33,8 @@
 
 int server_init(int server_port);
 
-int recv_message(int socket_desc, char *buffer);
+ssize_t recv_message(int socket_desc, char *buffer);
 
-int send_message(int socket_desc, char *buffer);
+ssize_t send_message(int socket_desc, char *buffer, int msg_length);
 
 #endif //GRID_FTP_PROTOCOL_H

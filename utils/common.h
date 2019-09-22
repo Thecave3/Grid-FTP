@@ -29,7 +29,7 @@
 void clear_screen() {
     printf("%s\033[1;1H\033[2J\n", KNRM);
     printf(">> ");
-    ERROR_HELPER(fflush(stdout), "Errore fflush", FALSE);
+    ERROR_HELPER(fflush(stdout), "Errore fflush", TRUE);
 }
 
 #endif // GRID_FTP_UTILS_H
