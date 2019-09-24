@@ -22,19 +22,28 @@
 #define OK_RESPONSE "ack"
 #define NOK_RESPONSE "nack"
 
-#define DR_UPDATE_MAP "update_map\n"
+#define DR_UPDATE_MAP_CMD "update_map\n"
 
-#define CLIENT_AUTH "auth"
-#define GET_DR "get_dr"
-#define GET "get"
-#define PUT "put"
-#define REMOVE "remove"
-#define TRANSFER "transfer"
+#define AUTH_CMD "auth"
+#define GET_DR_CMD "get_dr"
+#define GET_CMD "get"
+#define PUT_CMD "put"
+#define REMOVE_CMD "remove"
+#define TRANSFER_CMD "transfer"
+
+#define COMMAND_DELIMITER ","
+#define COMMAND_TERMINATOR "\n"
 
 int server_init(int server_port);
 
 ssize_t recv_message(int socket_desc, char *buffer);
 
 ssize_t send_message(int socket_desc, char *buffer, int msg_length);
+
+
+
+void craft_ack_response_stub(char *buffer);
+
+void craft_nack_response(char *buffer);
 
 #endif //GRID_FTP_PROTOCOL_H

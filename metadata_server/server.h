@@ -9,6 +9,8 @@
 #include "dr_list.h"
 
 #define DATAREP_FILE_PATH "./rep.conf"
+#define USERLIST_FILE_PATH "./user.db"
+
 #define CNFG_FILE_DEL ","
 
 #define SERVER_PORT 3000

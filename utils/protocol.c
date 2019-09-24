@@ -65,3 +65,15 @@ ssize_t send_message(int socket_desc, char *buffer, int msg_length) {
 
     return bytes_written;
 }
+
+void craft_ack_response_stub(char *buffer) {
+    memset(buffer, 0, strlen(buffer));
+    strncpy(buffer, OK_RESPONSE, strlen(OK_RESPONSE));
+    strncat(buffer, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
+}
+
+void craft_nack_response(char *buffer) {
+    memset(buffer, 0, strlen(buffer));
+    strncpy(buffer, NOK_RESPONSE, strlen(NOK_RESPONSE));
+    strncat(buffer, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
+}

@@ -25,6 +25,9 @@
 
 #define DEBUG TRUE
 
+#define PORT_DELIMITER 1024 // just to preserve reserved port
+#define HASH_LENGTH 32 // md5 hash length
+#define SECRET_KEY "secret"
 
 void clear_screen() {
     printf("%s\033[1;1H\033[2J\n", KNRM);

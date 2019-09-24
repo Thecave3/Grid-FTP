@@ -3,6 +3,8 @@
 //
 
 #include "dr_list.h"
+#include <string.h>
+#include <protocol.h>
 
 DR_List *new_list() {
     DR_List *list = (DR_List *) malloc(sizeof(DR_List));
@@ -20,28 +22,45 @@ void print_list(DR_List *list) {
 }
 
 
-Node *new_node(int id, char *ip, u_int16_t port) {
+//id,ip,port
+char *list_to_string(DR_List *list) {
+    int current_size = 0;
+    char *buf = (char *) calloc(sizeof(char), BUFSIZ);
+
+    for (Node *node = list->node; node; node = node->next) {
+        current_size += snprintf(buf + current_size, BUFSIZ, "%d%s%s%s%d", node->id, COMMAND_DELIMITER, node->ip,
+                                 COMMAND_DELIMITER, node->port);
+        if (current_size >= BUFSIZ)
+            buf = realloc(buf, 2 * BUFSIZ);
+
+        if (node->next) {
+            strncat(buf, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
+            current_size++;
+        }
+    }
+
+    return buf;
+}
+
+
+Node *new_node(u_int8_t id, char *ip, u_int16_t port) {
     Node *node = (Node *) malloc(sizeof(Node));
     node->id = id;
-    node->ip = ip;
-    node->port = (u_int16_t) port;
+    node->ip = (char *) malloc(MAX_LEN_IP * sizeof(char));
+    strncpy(node->ip, ip, MAX_LEN_IP);
+    node->port = port;
     node->next = NULL;
     return node;
 }
 
 void append_to_list(DR_List *list, Node *node) {
     list->size++;
-    if (list->node == NULL) {
-        list->node = node;
-        return;
-    } else
-        return append_node(list->node, node);
+    list->node = append_node(list->node, node);
 }
 
-void append_node(Node *head, Node *new_node) {
-    if (head->next == NULL) {
-        head->next = new_node;
-        return;
-    }
-    return append_node(head->next, new_node);
+Node *append_node(Node *head, Node *new_node) {
+    if (!head)
+        return new_node;
+    head->next = append_node(head->next, new_node);
+    return head;
 }

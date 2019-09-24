@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS= #-Wall -Werror -Wextra -pedantic
 OPT = -O0
-LDFLAGS = -ggdb -lpthread
+LDFLAGS = -ggdb -lpthread -lcrypto
 PFLAGS= -pg # used just for debug
 CMN = utils/common.h
 SERVER_CMN = metadata_server/dr_list.h metadata_server/dr_list.c

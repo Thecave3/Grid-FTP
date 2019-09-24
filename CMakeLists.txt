@@ -3,6 +3,8 @@ project(Grid_FTP C)
 
 set(CMAKE_C_STANDARD 11)
 
+find_package(Threads REQUIRED)
+
 include_directories(client)
 include_directories(data_repository)
 include_directories(metadata_server)
@@ -30,6 +32,10 @@ add_executable(Grid_FTP_Repository
         utils/colors.h
         utils/common.h
         utils/protocol.h utils/protocol.c utils/error_helper.h)
+
+target_link_libraries(Grid_FTP_Server Threads::Threads)
+target_link_libraries(Grid_FTP_Repository Threads::Threads)
+target_link_libraries(Grid_FTP_Client Threads::Threads)
 
 
 #find_package(Doxygen)

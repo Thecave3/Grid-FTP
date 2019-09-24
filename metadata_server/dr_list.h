@@ -8,8 +8,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define MAX_LEN_IP 32
+
 typedef struct Node {
-    int id;
+    u_int8_t id;
     char *ip;
     u_int16_t port;
     struct Node *next;
@@ -23,13 +25,15 @@ typedef struct DR_List {
 
 DR_List *new_list();
 
-Node *new_node(int id, char *ip, u_int16_t port);
+Node *new_node(u_int8_t id, char *ip, u_int16_t port);
 
 void print_list(DR_List *list);
 
+char *list_to_string(DR_List *list);
+
 void append_to_list(DR_List *list, Node *node);
 
-void append_node(Node *head, Node *new_node);
+Node *append_node(Node *head, Node *new_node);
 
 
 #endif //GRID_FTP_DR_LIST_H
