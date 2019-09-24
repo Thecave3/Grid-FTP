@@ -34,16 +34,28 @@
 #define COMMAND_DELIMITER ","
 #define COMMAND_TERMINATOR "\n"
 
+#define FILE_SIZE_LIMIT 20
+// it means that protocol can move files with at maximum FILE_SIZE_LIMIT digits (e.g. a 100 bytes file has 3 digits)
+// This limit was put just to optimize memory allocated in for file size buffer since with a number long 20 digits
+// it is possible to represent 8 EB which is the maximum theoretical file size on Linux NFSv3 (client side)
+// https://www.novell.com/documentation/suse91/suselinux-adminguide/html/apas04.html
+
 int server_init(int server_port);
 
 ssize_t recv_message(int socket_desc, char *buffer);
 
-ssize_t send_message(int socket_desc, char *buffer, int msg_length);
+ssize_t send_message(int socket_desc, char *buffer, unsigned long msg_length);
 
+FILE *recv_file(int socket_desc, char *file_name, long unsigned file_size);
 
+void send_file(int socket_desc, char *file_path, char *file_size);
 
-void craft_ack_response_stub(char *buffer);
+void craft_ack_response_header(char *buffer);
+
+void craft_ack_response(char *buffer);
 
 void craft_nack_response(char *buffer);
+
+char **get_file_name(char *file_path);
 
 #endif //GRID_FTP_PROTOCOL_H

@@ -14,7 +14,7 @@ typedef struct thread_args {
 DR_List *get_data_repositories_info() {
     FILE *fp;
     char data_info[BUFSIZ];
-    if ((fp = fopen(DATAREP_FILE_PATH, "r")) == NULL) {
+    if (!(fp = fopen(DATAREP_FILE_PATH, "r"))) {
         fprintf(stderr,
                 "%sCan't open configuration file at \"%s\". Wrong path?%s\n", KRED,
                 DATAREP_FILE_PATH, KNRM);
@@ -26,9 +26,9 @@ DR_List *get_data_repositories_info() {
     u_int16_t port_rep;
 
     while (fgets(data_info, sizeof(data_info), fp) != NULL && strlen(data_info) > 1) {
-        id_rep = (u_int8_t) strtol(strtok(data_info, CNFG_FILE_DEL), NULL, 10);
-        ip_rep = strtok(NULL, CNFG_FILE_DEL);
-        port_rep = strtol(strtok(NULL, CNFG_FILE_DEL), NULL, 10);
+        id_rep = (u_int8_t) strtol(strtok(data_info, CNFG_FILE_DELIMITER), NULL, 10);
+        ip_rep = strtok(NULL, CNFG_FILE_DELIMITER);
+        port_rep = strtol(strtok(NULL, CNFG_FILE_DELIMITER), NULL, 10);
         append_to_list(list, new_node(id_rep, ip_rep, port_rep));
     }
 
@@ -41,7 +41,7 @@ int client_authentication(char *buf) {
     char *password;
     FILE *fp;
     char data_info[BUFSIZ];
-    if ((fp = fopen(USERLIST_FILE_PATH, "r")) == NULL) {
+    if (!(fp = fopen(USERLIST_FILE_PATH, "r"))) {
         fprintf(stderr,
                 "%sCan't open userdb at \"%s\". Wrong path?%s\n", KRED,
                 USERLIST_FILE_PATH, KNRM);
@@ -49,8 +49,8 @@ int client_authentication(char *buf) {
     }
 
     while (fgets(data_info, sizeof(data_info), fp) != NULL && strlen(data_info) > 1) {
-        username = strtok(data_info, CNFG_FILE_DEL);
-        password = strtok(NULL, CNFG_FILE_DEL);
+        username = strtok(data_info, CNFG_FILE_DELIMITER);
+        password = strtok(NULL, CNFG_FILE_DELIMITER);
         // TODO debug
         if (strncmp(username, buf, strlen(username)) == 0 &&
             strncmp(password, buf + strlen(username), strlen(password)) == 0) {
@@ -73,21 +73,29 @@ void *client_handling(void *args) {
             if (client_authentication(buf + strlen(AUTH_CMD))) {
                 char *key = (char *) malloc(sizeof(char) * HASH_LENGTH);
                 strncpy(key, "chiave", strlen("chiave"));
-                craft_ack_response_stub(buf);
+                craft_ack_response_header(buf);
                 strncat(buf, key, strlen(key));
                 strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
             } else {
                 craft_nack_response(buf);
             }
-            send_message(client_desc, buf, (int) strlen(buf));
+            send_message(client_desc, buf, strlen(buf));
 
         } else if (strncmp(buf, GET_DR_CMD, strlen(GET_DR_CMD)) == 0) {
             char *dr_list_string = list_to_string(list);
-            craft_ack_response_stub(buf);
+            craft_ack_response_header(buf);
             strncat(buf, dr_list_string, strlen(dr_list_string));
             strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
-            send_message(client_desc, buf, (int) strlen(buf));
+            send_message(client_desc, buf, strlen(buf));
         } else if (strncmp(buf, PUT_CMD, strlen(PUT_CMD)) == 0) {
+            strtok(buf, COMMAND_DELIMITER); // we just ignore the PUT_CMD header
+            char *file_name = strtok(NULL, COMMAND_DELIMITER);
+            // TODO check if this or COMMAND TERMINATOR
+            long unsigned file_size = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
+            craft_ack_response(buf);
+            send_message(client_desc, buf, strlen(buf));
+            FILE *fp = recv_file(client_desc, file_name, file_size);
+            // TODO divide file in blocks and end PUT_CMD
 
         } else if (strncmp(buf, GET_CMD, strlen(GET_CMD)) == 0) {
 
@@ -95,7 +103,7 @@ void *client_handling(void *args) {
 
         } else { // Unrecognized command
             craft_nack_response(buf);
-            send_message(client_desc, buf, (int) strlen(buf));
+            send_message(client_desc, buf, strlen(buf));
         }
     }
 

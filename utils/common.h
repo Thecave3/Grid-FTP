@@ -21,6 +21,7 @@
 #include <sys/shm.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/sendfile.h>
 #include <pthread.h>
 
 #define DEBUG TRUE
