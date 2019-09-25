@@ -3,4 +3,11 @@
 
 #include "../utils/common.h"
 
+#define CLEAR "clear"
+#define HELP "help"
+#define PUT "put"
+#define GET "get"
+#define REMOVE "rm"
+#define EXIT_CLIENT "exit"
+
 #endif // GRID_FTP_CLIENT_H

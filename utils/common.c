@@ -10,8 +10,7 @@
 
 void clear_screen() {
     printf("%s\033[1;1H\033[2J\n", KNRM);
-    printf(">> ");
-    ERROR_HELPER(fflush(stdout), "Errore fflush", TRUE);
+    ERROR_HELPER(fflush(stdout), "Error on fflush", TRUE);
 }
 
 

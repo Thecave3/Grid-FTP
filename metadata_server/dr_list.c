@@ -64,3 +64,27 @@ Node *append_node(Node *head, Node *new_node) {
     head->next = append_node(head->next, new_node);
     return head;
 }
+
+void delete_node(DR_List *list, u_int8_t id) {
+    Node *temp = list->node;
+    Node *pre = NULL;
+
+    if (id == temp->id) {
+        list->size--;
+        list->node = temp->next;
+        free(temp);
+        return;
+    }
+
+    while (temp && temp->id != id) {
+        pre = temp;
+        temp = temp->next;
+    }
+
+    if (!temp)
+        return;
+
+    list->size--;
+    pre->next = temp->next;
+    free(temp);
+}

@@ -51,9 +51,8 @@ int client_authentication(char *buf) {
     while (fgets(data_info, sizeof(data_info), fp) != NULL && strlen(data_info) > 1) {
         username = strtok(data_info, CNFG_FILE_DELIMITER);
         password = strtok(NULL, CNFG_FILE_DELIMITER);
-        // TODO debug
         if (strncmp(username, buf, strlen(username)) == 0 &&
-            strncmp(password, buf + strlen(username), strlen(password)) == 0) {
+            strncmp(password, buf + strlen(username) + strlen(COMMAND_DELIMITER), strlen(password)) == 0) {
             return TRUE;
         }
     }
@@ -67,12 +66,15 @@ void *client_handling(void *args) {
     DR_List *list = t_args->list;
     int client_desc = t_args->client_desc;
     char buf[BUFSIZ];
-    while (server_on) {
+    sig_atomic_t client_on = 1;
+
+    while (server_on && client_on) {
         recv_message(client_desc, buf);
         if (strncmp(buf, AUTH_CMD, strlen(AUTH_CMD)) == 0) {
-            if (client_authentication(buf + strlen(AUTH_CMD))) {
+            if (client_authentication(buf + strlen(AUTH_CMD) + strlen(COMMAND_DELIMITER))) {
                 char *key = (char *) malloc(sizeof(char) * HASH_LENGTH);
-                strncpy(key, "chiave", strlen("chiave"));
+                strncpy(key, "chiave", strlen("chiave")); // TODO
+
                 craft_ack_response_header(buf);
                 strncat(buf, key, strlen(key));
                 strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
@@ -80,7 +82,6 @@ void *client_handling(void *args) {
                 craft_nack_response(buf);
             }
             send_message(client_desc, buf, strlen(buf));
-
         } else if (strncmp(buf, GET_DR_CMD, strlen(GET_DR_CMD)) == 0) {
             char *dr_list_string = list_to_string(list);
             craft_ack_response_header(buf);
@@ -88,24 +89,29 @@ void *client_handling(void *args) {
             strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
             send_message(client_desc, buf, strlen(buf));
         } else if (strncmp(buf, PUT_CMD, strlen(PUT_CMD)) == 0) {
+
             strtok(buf, COMMAND_DELIMITER); // we just ignore the PUT_CMD header
             char *file_name = strtok(NULL, COMMAND_DELIMITER);
             // TODO check if this or COMMAND TERMINATOR
             long unsigned file_size = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
-            //data_block_division(file_name, file_size);
+            // TODO data_block_division(file_name, file_size);
+
+
             craft_ack_response_header(buf);
             // append list
             strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
             send_message(client_desc, buf, strlen(buf));
+
         } else if (strncmp(buf, GET_CMD, strlen(GET_CMD)) == 0) {
 
         } else if (strncmp(buf, REMOVE_CMD, strlen(REMOVE_CMD)) == 0) {
 
+        } else if (strncmp(buf, QUIT_CMD, strlen(QUIT_CMD)) == 0) {
+            client_on = 0;
         } else { // Unrecognized command
             craft_nack_response(buf);
             send_message(client_desc, buf, strlen(buf));
         }
-        // TODO Exit command
     }
 
     pthread_exit(NULL);
@@ -140,7 +146,7 @@ void server_routine(DR_List *list) {
 }
 
 
-int start_connection_with_dr(Node *pNode) {
+int start_connection_with_dr(Node *pNode, DR_List *list) {
     printf("Starting connection with node %u at %s : %u\n", pNode->id, pNode->ip, pNode->port);
     int ret;
     struct sockaddr_in repo_addr = {};
@@ -155,6 +161,7 @@ int start_connection_with_dr(Node *pNode) {
     ret = connect(sock_d, (struct sockaddr *) &repo_addr, sizeof(struct sockaddr_in));
     if (ret < 0) {
         fprintf(stderr, "Node %d is offline probably.", pNode->id);
+        delete_node(list, pNode->id);
         return ret;
     }
 
@@ -179,12 +186,13 @@ int start_connection_with_dr(Node *pNode) {
 
 int main(int argc, char const *argv[]) {
 
-    //TODO handling SIGINT + SIGPIPE
+    //TODO handling SIGINT
+    signal(SIGPIPE, SIG_IGN);
 
     printf("Start reading configuration file...\n");
     DR_List *list = get_data_repositories_info();
     for (Node *node = list->node; node; node = node->next)
-        start_connection_with_dr(node);
+        start_connection_with_dr(node, list);
 
     server_routine(list);
 

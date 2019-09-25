@@ -69,6 +69,7 @@ ssize_t send_message(int socket_desc, char *buffer, unsigned long msg_length) {
 }
 
 FILE *recv_file(int socket_desc, char *file_name, long unsigned file_size) {
+    int ret;
     char buf[BUFSIZ];
     FILE *fp;
     if (!(fp = fopen(file_name, "wb"))) {
@@ -77,7 +78,7 @@ FILE *recv_file(int socket_desc, char *file_name, long unsigned file_size) {
         exit(EXIT_FAILURE);
     }
     long unsigned remain_data = file_size;
-    int ret;
+
     while ((remain_data > 0) && ((ret = recv(socket_desc, buf, BUFSIZ, 0)) > 0)) {
         fwrite(buf, sizeof(char), ret, fp);
         remain_data -= ret;
@@ -116,9 +117,18 @@ void send_file(int socket_desc, char *file_path, char *file_size) {
 }
 
 
-void craft_ack_stub(char *buffer) {
+void craft_header(char *buffer, char *command) {
     memset(buffer, 0, strlen(buffer));
-    strncpy(buffer, OK_RESPONSE, strlen(OK_RESPONSE));
+    strncpy(buffer, command, strlen(command));
+}
+
+void craft_request_header(char *buffer, char *command) {
+    craft_header(buffer, command);
+    strncat(buffer, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
+}
+
+void craft_ack_stub(char *buffer) {
+    craft_header(buffer, OK_RESPONSE);
 }
 
 void craft_ack_response_header(char *buffer) {

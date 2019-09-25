@@ -30,6 +30,7 @@
 #define PUT_CMD "put"
 #define REMOVE_CMD "remove"
 #define TRANSFER_CMD "transfer"
+#define QUIT_CMD "quit"
 
 #define COMMAND_DELIMITER ","
 #define COMMAND_TERMINATOR "\n"
@@ -49,6 +50,8 @@ ssize_t send_message(int socket_desc, char *buffer, unsigned long msg_length);
 FILE *recv_file(int socket_desc, char *file_name, long unsigned file_size);
 
 void send_file(int socket_desc, char *file_path, char *file_size);
+
+void craft_request_header(char *buffer, char *command);
 
 void craft_ack_response_header(char *buffer);
 

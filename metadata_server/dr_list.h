@@ -35,5 +35,7 @@ void append_to_list(DR_List *list, Node *node);
 
 Node *append_node(Node *head, Node *new_node);
 
+void delete_node(DR_List *list, u_int8_t id);
+
 
 #endif //GRID_FTP_DR_LIST_H

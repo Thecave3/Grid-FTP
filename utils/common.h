@@ -30,6 +30,12 @@
 #define HASH_LENGTH 32 // md5 hash length
 #define SECRET_KEY "secret"
 
+#define SERVER_ADDR "127.0.0.1"
+#define SERVER_PORT 3000
+
+#define MAX_LEN_UNAME 16
+#define MAX_LEN_PWD 16
+
 void clear_screen();
 
 char **get_file_name(char *file_path);
