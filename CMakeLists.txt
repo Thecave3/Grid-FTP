@@ -13,8 +13,8 @@ include_directories(utils)
 add_executable(Grid_FTP_Server
         metadata_server/server.c
         metadata_server/server.h
-        metadata_server/dr_list.c
-        metadata_server/dr_list.h
+        utils/dr_list.c
+        utils/dr_list.h
         utils/colors.h
         utils/common.h
         utils/protocol.h utils/protocol.c utils/error_helper.h utils/common.c)
@@ -24,6 +24,8 @@ add_executable(Grid_FTP_Client
         client/client.h
         utils/colors.h
         utils/common.h
+        utils/dr_list.c
+        utils/dr_list.h
         utils/protocol.h utils/protocol.c utils/error_helper.h utils/common.c)
 
 add_executable(Grid_FTP_Repository
@@ -31,6 +33,8 @@ add_executable(Grid_FTP_Repository
         data_repository/data_repository.h
         utils/colors.h
         utils/common.h
+        utils/dr_list.c
+        utils/dr_list.h
         utils/protocol.h utils/protocol.c utils/error_helper.h utils/common.c)
 
 target_link_libraries(Grid_FTP_Server Threads::Threads)

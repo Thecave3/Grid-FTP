@@ -70,7 +70,7 @@ void quit_command(int client_desc) {
     close(client_desc);
 }
 
-void client_routine(int client_desc, char *key) {
+void client_routine(int client_desc, char *key, DR_List *list) {
     char buf[BUFSIZ];
     int ret;
 
@@ -119,21 +119,60 @@ void client_routine(int client_desc, char *key) {
 }
 
 
+DR_List *get_data_repositories(int client_desc, char *key) {
+    char buf[BUFSIZ];
+
+    craft_request_header(buf, GET_DR_CMD);
+    strncat(buf, key, strlen(key));
+    strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
+
+    send_message(client_desc, buf, strlen(buf));
+
+    recv_message(client_desc, buf);
+
+    if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
+        strtok(buf, COMMAND_DELIMITER);
+        DR_List *list = new_list();
+
+        u_int8_t id_rep;
+        char *id_rep_str, *ip_rep, *port_rep_str;
+        u_int16_t port_rep;
+
+        while ((id_rep_str = strtok(NULL, COMMAND_DELIMITER)) != NULL) {
+            id_rep = (u_int8_t) strtol(id_rep_str, NULL, 10);
+            ip_rep = strtok(NULL, COMMAND_DELIMITER);
+            port_rep_str = strtok(NULL, COMMAND_DELIMITER);
+            port_rep = strtol(port_rep_str, NULL, 10);
+            append_to_list(list, new_node(id_rep, ip_rep, port_rep));
+        }
+
+        return list;
+    } else {
+        return NULL;
+    }
+}
+
 int main(/*int argc, char const *argv[]*/) {
 
     int client_desc = client_init();
 
-    // TODO get data repository
-
     char *key = authentication(client_desc);
     if (!key) {
-        printf("%sAuthentication failed!\nExiting...\n%s", KRED, KNRM);
+        perror("Authentication failed!\nExiting...\n");
         quit_command(client_desc);
+        return 0;
+    }
+
+    DR_List *list = get_data_repositories(client_desc, key);
+    if (!list) {
+        perror("Error in the creation of the list, exiting");
+        quit_command(client_desc);
+        return -1;
     }
 
     printf("%sGrid FTP Client, type a command:%s\n", KBLU, KNRM);
 
-    client_routine(client_desc, key);
+    client_routine(client_desc, key, list);
 
     return 0;
 }

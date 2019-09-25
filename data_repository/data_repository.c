@@ -37,6 +37,8 @@ int main(int argc, char const *argv[]) {
             printf("Invalid port number!\n");
             print_usage(argv[0]);
         } else {
+            signal(SIGPIPE, SIG_IGN);
+
             start_dr_routine(dr_port);
         }
     } else {
