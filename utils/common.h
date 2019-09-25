@@ -30,10 +30,8 @@
 #define HASH_LENGTH 32 // md5 hash length
 #define SECRET_KEY "secret"
 
-void clear_screen() {
-    printf("%s\033[1;1H\033[2J\n", KNRM);
-    printf(">> ");
-    ERROR_HELPER(fflush(stdout), "Errore fflush", TRUE);
-}
+void clear_screen();
+
+char **get_file_name(char *file_path);
 
 #endif // GRID_FTP_UTILS_H

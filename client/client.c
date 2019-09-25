@@ -10,5 +10,11 @@ int main(/*int argc, char const *argv[]*/) {
 //    strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
 //
 //    send_message(socket_desc, buf, strlen(buf));
+
+//
+//    craft_ack_response(buf);
+//    send_message(client_desc, buf, strlen(buf));
+//    FILE *fp = recv_file(client_desc, file_name, file_size);
+//    // TODO divide file in blocks and end PUT_CMD
     return 0;
 }

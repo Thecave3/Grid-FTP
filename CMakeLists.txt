@@ -17,21 +17,21 @@ add_executable(Grid_FTP_Server
         metadata_server/dr_list.h
         utils/colors.h
         utils/common.h
-        utils/protocol.h utils/protocol.c utils/error_helper.h)
+        utils/protocol.h utils/protocol.c utils/error_helper.h utils/common.c)
 
 add_executable(Grid_FTP_Client
         client/client.c
         client/client.h
         utils/colors.h
         utils/common.h
-        utils/protocol.h utils/protocol.c utils/error_helper.h)
+        utils/protocol.h utils/protocol.c utils/error_helper.h utils/common.c)
 
 add_executable(Grid_FTP_Repository
         data_repository/data_repository.c
         data_repository/data_repository.h
         utils/colors.h
         utils/common.h
-        utils/protocol.h utils/protocol.c utils/error_helper.h)
+        utils/protocol.h utils/protocol.c utils/error_helper.h utils/common.c)
 
 target_link_libraries(Grid_FTP_Server Threads::Threads)
 target_link_libraries(Grid_FTP_Repository Threads::Threads)

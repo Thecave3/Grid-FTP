@@ -92,11 +92,11 @@ void *client_handling(void *args) {
             char *file_name = strtok(NULL, COMMAND_DELIMITER);
             // TODO check if this or COMMAND TERMINATOR
             long unsigned file_size = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
-            craft_ack_response(buf);
+            //data_block_division(file_name, file_size);
+            craft_ack_response_header(buf);
+            // append list
+            strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
             send_message(client_desc, buf, strlen(buf));
-            FILE *fp = recv_file(client_desc, file_name, file_size);
-            // TODO divide file in blocks and end PUT_CMD
-
         } else if (strncmp(buf, GET_CMD, strlen(GET_CMD)) == 0) {
 
         } else if (strncmp(buf, REMOVE_CMD, strlen(REMOVE_CMD)) == 0) {
@@ -105,6 +105,7 @@ void *client_handling(void *args) {
             craft_nack_response(buf);
             send_message(client_desc, buf, strlen(buf));
         }
+        // TODO Exit command
     }
 
     pthread_exit(NULL);

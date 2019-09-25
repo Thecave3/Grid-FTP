@@ -56,6 +56,4 @@ void craft_ack_response(char *buffer);
 
 void craft_nack_response(char *buffer);
 
-char **get_file_name(char *file_path);
-
 #endif //GRID_FTP_PROTOCOL_H
