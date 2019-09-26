@@ -21,7 +21,7 @@ char **get_file_name(char *file_path) {
     int fd, ret;
     if (!(fd = open(file_path, O_RDONLY))) {
         fprintf(stderr, "Can't open file at \"%s\". Wrong path?\n", file_path);
-        exit(EXIT_FAILURE); // TODO can be improved
+        return NULL;
     }
 
     ret = fstat(fd, &file_stat);

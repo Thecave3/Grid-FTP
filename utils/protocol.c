@@ -96,7 +96,7 @@ void send_file(int socket_desc, char *file_path, char *file_size) {
 
     if (!(fd = open(file_path, O_RDONLY))) {
         fprintf(stderr, "Can't open file at \"%s\". Wrong path?\n", file_path);
-        exit(EXIT_FAILURE); // TODO can be improved
+        exit(EXIT_FAILURE);
     }
 
     long unsigned remain_data = strtol(file_size, NULL, 10);

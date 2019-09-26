@@ -33,8 +33,6 @@ char *list_to_string(DR_List *list);
 
 void append_to_list(DR_List *list, Node *node);
 
-Node *append_node(Node *head, Node *new_node);
-
 void delete_node(DR_List *list, u_int8_t id);
 
 

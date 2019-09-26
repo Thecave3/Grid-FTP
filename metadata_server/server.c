@@ -61,6 +61,33 @@ int client_authentication(char *buf) {
     return FALSE;
 }
 
+// dr_id,start_block,final_block
+char *data_block_division(DR_List *list, char *name, unsigned long size) {
+    char *result = (char *) malloc(sizeof(char) * BUFSIZ);
+    unsigned long block_size = size / list->size;
+    unsigned long remaining = size % list->size;
+
+    unsigned long start_block = 0;
+    unsigned long end_block = block_size;
+    Node *node = list->node;
+    for (int i = 0; i < list->size; i++, node = node->next) {
+        snprintf(result, sizeof(node->id), "%hhu", node->id);
+        strncat(result, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
+        snprintf(result, sizeof(start_block), "%lu", start_block);
+        strncat(result, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
+        snprintf(result, sizeof(end_block), "%lu", end_block);
+        //TODO create node for list file
+        start_block = end_block + 1;
+        if (i + 1 == list->size) {
+            end_block = end_block + block_size + remaining;
+        } else {
+            end_block += block_size;
+            strncat(result, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
+        }
+    }
+    return result;
+}
+
 void *client_handling(void *args) {
     thread_args *t_args = (thread_args *) args;
     DR_List *list = t_args->list;
@@ -71,10 +98,10 @@ void *client_handling(void *args) {
     while (server_on && client_on) {
         recv_message(client_desc, buf);
         if (strncmp(buf, AUTH_CMD, strlen(AUTH_CMD)) == 0) {
+
             if (client_authentication(buf + strlen(AUTH_CMD) + strlen(COMMAND_DELIMITER))) {
                 char *key = (char *) malloc(sizeof(char) * HASH_LENGTH);
-                strncpy(key, "chiave", strlen("chiave")); // TODO
-
+                strncpy(key, SECRET_KEY, strlen(SECRET_KEY)); // TODO hash of secret
                 craft_ack_response_header(buf);
                 strncat(buf, key, strlen(key));
                 strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
@@ -82,29 +109,34 @@ void *client_handling(void *args) {
                 craft_nack_response(buf);
             }
             send_message(client_desc, buf, strlen(buf));
+
         } else if (strncmp(buf, GET_DR_CMD, strlen(GET_DR_CMD)) == 0) {
+
             char *dr_list_string = list_to_string(list);
             craft_ack_response_header(buf);
             strncat(buf, dr_list_string, strlen(dr_list_string));
             strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
             send_message(client_desc, buf, strlen(buf));
+
         } else if (strncmp(buf, PUT_CMD, strlen(PUT_CMD)) == 0) {
 
             strtok(buf, COMMAND_DELIMITER); // we just ignore the PUT_CMD header
             char *file_name = strtok(NULL, COMMAND_DELIMITER);
-            // TODO check if this or COMMAND TERMINATOR
             long unsigned file_size = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
-            // TODO data_block_division(file_name, file_size);
-
-
+            char *division_list = data_block_division(list, file_name, file_size);
             craft_ack_response_header(buf);
-            // append list
+            strncat(buf, division_list, strlen(division_list));
             strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
             send_message(client_desc, buf, strlen(buf));
 
         } else if (strncmp(buf, GET_CMD, strlen(GET_CMD)) == 0) {
 
+            strtok(buf, COMMAND_DELIMITER); // we just ignore the GET_CMD header
+            char *file_name = strtok(NULL, COMMAND_DELIMITER);
+            //TODO return block range
+
         } else if (strncmp(buf, REMOVE_CMD, strlen(REMOVE_CMD)) == 0) {
+            //TODO remove from list
 
         } else if (strncmp(buf, QUIT_CMD, strlen(QUIT_CMD)) == 0) {
             client_on = 0;

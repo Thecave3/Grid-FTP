@@ -36,7 +36,7 @@ char *authentication(int client_desc) {
     char buf[BUFSIZ];
     int ret;
 
-    // TODO username and password as argument
+    // TODO username and password as argument + check lengths
     printf("Username: ");
     ret = fgets(username, sizeof(username), stdin) != (char *) username;
     ERROR_HELPER(ret, "Error on input read", TRUE);
@@ -83,20 +83,30 @@ void client_routine(int client_desc, char *key, DR_List *list) {
         } else if (strncmp(buf, HELP, strlen(HELP)) == 0) {
             commands_available();
         } else if (strncmp(buf, PUT, strlen(PUT)) == 0) {
+            char file_path[FILENAME_MAX];
+            printf("Path of the file: ");
+            ret = fgets(file_path, sizeof(file_path), stdin) != (char *) file_path;
+            ERROR_HELPER(ret, "Error on input read", TRUE);
+            file_path[strlen(file_path) - 1] = 0;
+            char **file_info = get_file_name(file_path);
+            if (!file_info)
+                continue;
+            char *file_name = file_info[0];
+            char *file_size = file_info[1];
 
-//            craft_request_header(buf, PUT_CMD);
-//            strncat(buf, file_name, strlen(file_name));
-//            strncat(buf, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
-//            strncat(buf, file_size, strlen(file_size));
-//            strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
-//
-//            send_message(socket_desc, buf, strlen(buf));
-//
-//
-//            craft_ack_response(buf);
-//            send_message(client_desc, buf, strlen(buf));
-//            FILE *fp = recv_file(client_desc, file_name, file_size);
-            // TODO divide file in blocks and end PUT_CMD
+            craft_request_header(buf, PUT_CMD);
+            strncat(buf, file_name, strlen(file_name));
+            strncat(buf, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
+            strncat(buf, file_size, strlen(file_size));
+            strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
+
+            send_message(client_desc, buf, strlen(buf));
+
+            recv_message(client_desc, buf);
+            // parse list of block and dr
+//             TODO divide file in blocks and send PUT_CMD to dr
+
+
 
         } else if (strncmp(buf, GET, strlen(GET)) == 0) {
 

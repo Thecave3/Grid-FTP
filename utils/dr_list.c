@@ -14,7 +14,6 @@ DR_List *new_list() {
 }
 
 
-
 void print_list(DR_List *list) {
     printf("************************\n");
     printf("Repository list:\n");
@@ -55,16 +54,31 @@ Node *new_node(u_int8_t id, char *ip, u_int16_t port) {
     return node;
 }
 
-void append_to_list(DR_List *list, Node *node) {
-    list->size++;
-    list->node = append_node(list->node, node);
-}
 
 Node *append_node(Node *head, Node *new_node) {
     if (!head)
         return new_node;
     head->next = append_node(head->next, new_node);
     return head;
+}
+
+void append_to_list(DR_List *list, Node *node) {
+    list->size++;
+    list->node = append_node(list->node, node);
+}
+
+Node *_get_node(Node *node, u_int8_t id) {
+    if (!node)
+        return node;
+
+    if (node->id == id)
+        return node;
+
+    return _get_node(node->next, id);
+}
+
+Node *get_node(DR_List *list, u_int8_t id) {
+    return _get_node(list->node, id);
 }
 
 void delete_node(DR_List *list, u_int8_t id) {
