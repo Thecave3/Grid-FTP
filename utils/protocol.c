@@ -113,7 +113,6 @@ void send_file(int socket_desc, char *file_path, char *file_size) {
         remain_data -= ret;
     }
     close(fd);
-    free(buf);
 }
 
 

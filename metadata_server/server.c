@@ -68,17 +68,18 @@ char *data_block_division(Grid_File_DB *file_db, DR_List *list, char *name, unsi
     unsigned long block_size = size / list->size;
     unsigned long remaining = size % list->size;
 
+    char block_name[FILENAME_MAX];
     unsigned long start_block = 0;
     unsigned long end_block = block_size;
     Node *node = list->node;
     Block_File *head = NULL;
+    Block_File *block_new;
+
     for (int i = 0; i < list->size; i++, node = node->next) {
-        snprintf(result, sizeof(node->id), "%hhu", node->id);
-        strncat(result, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
-        snprintf(result, sizeof(start_block), "%lu", start_block);
-        strncat(result, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
-        snprintf(result, sizeof(end_block), "%lu", end_block);
-        add_block(head, new_block(node->id, start_block, end_block));
+        block_new = new_block(block_name, node->id, start_block, end_block);
+        head = append_block(head, block_new);
+        block_to_string(result, block_new);
+
         start_block = end_block + 1;
         if (i + 1 == list->size) {
             end_block = end_block + block_size + remaining;
@@ -147,6 +148,7 @@ void *client_handling(void *args) {
             strtok(buf, COMMAND_DELIMITER); // we just ignore the GET_CMD header
             char *file_name = strtok(NULL, COMMAND_DELIMITER);
             char *file_str = file_to_string(get_file(file_db, file_name));
+
             craft_ack_response_header(buf);
             strncat(buf, file_str, strlen(file_str));
             strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
