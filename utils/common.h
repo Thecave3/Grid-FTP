@@ -4,6 +4,7 @@
 
 #ifndef GRID_FTP_UTILS_H
 #define GRID_FTP_UTILS_H
+
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
@@ -24,6 +25,7 @@
 #include "colors.h"
 #include "protocol.h"
 #include "error_helper.h"
+#include "file_db.h"
 
 #define DEBUG TRUE
 

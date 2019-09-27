@@ -9,6 +9,7 @@ sig_atomic_t server_on = 1;
 typedef struct thread_args {
     int client_desc;
     DR_List *list;
+    Grid_File_DB *file_db;
 } thread_args;
 
 DR_List *get_data_repositories_info() {
@@ -62,7 +63,7 @@ int client_authentication(char *buf) {
 }
 
 // dr_id,start_block,final_block
-char *data_block_division(DR_List *list, char *name, unsigned long size) {
+char *data_block_division(Grid_File_DB *file_db, DR_List *list, char *name, unsigned long size) {
     char *result = (char *) malloc(sizeof(char) * BUFSIZ);
     unsigned long block_size = size / list->size;
     unsigned long remaining = size % list->size;
@@ -70,13 +71,14 @@ char *data_block_division(DR_List *list, char *name, unsigned long size) {
     unsigned long start_block = 0;
     unsigned long end_block = block_size;
     Node *node = list->node;
+    Block_File *head = NULL;
     for (int i = 0; i < list->size; i++, node = node->next) {
         snprintf(result, sizeof(node->id), "%hhu", node->id);
         strncat(result, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
         snprintf(result, sizeof(start_block), "%lu", start_block);
         strncat(result, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
         snprintf(result, sizeof(end_block), "%lu", end_block);
-        //TODO create node for list file
+        add_block(head, new_block(node->id, start_block, end_block));
         start_block = end_block + 1;
         if (i + 1 == list->size) {
             end_block = end_block + block_size + remaining;
@@ -85,19 +87,27 @@ char *data_block_division(DR_List *list, char *name, unsigned long size) {
             strncat(result, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
         }
     }
+
+    add_file(file_db, name, size, head);
+
     return result;
 }
 
 void *client_handling(void *args) {
     thread_args *t_args = (thread_args *) args;
     DR_List *list = t_args->list;
+    Grid_File_DB *file_db = t_args->file_db;
     int client_desc = t_args->client_desc;
     char buf[BUFSIZ];
     sig_atomic_t client_on = 1;
 
     while (server_on && client_on) {
         recv_message(client_desc, buf);
-        if (strncmp(buf, AUTH_CMD, strlen(AUTH_CMD)) == 0) {
+        if (strncmp(buf, LS_CMD, strlen(LS_CMD)) == 0) {
+
+            // TODO print the filename in a string and send to the client
+
+        } else if (strncmp(buf, AUTH_CMD, strlen(AUTH_CMD)) == 0) {
 
             if (client_authentication(buf + strlen(AUTH_CMD) + strlen(COMMAND_DELIMITER))) {
                 char *key = (char *) malloc(sizeof(char) * HASH_LENGTH);
@@ -108,6 +118,7 @@ void *client_handling(void *args) {
             } else {
                 craft_nack_response(buf);
             }
+
             send_message(client_desc, buf, strlen(buf));
 
         } else if (strncmp(buf, GET_DR_CMD, strlen(GET_DR_CMD)) == 0) {
@@ -116,6 +127,7 @@ void *client_handling(void *args) {
             craft_ack_response_header(buf);
             strncat(buf, dr_list_string, strlen(dr_list_string));
             strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
+
             send_message(client_desc, buf, strlen(buf));
 
         } else if (strncmp(buf, PUT_CMD, strlen(PUT_CMD)) == 0) {
@@ -123,20 +135,35 @@ void *client_handling(void *args) {
             strtok(buf, COMMAND_DELIMITER); // we just ignore the PUT_CMD header
             char *file_name = strtok(NULL, COMMAND_DELIMITER);
             long unsigned file_size = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
-            char *division_list = data_block_division(list, file_name, file_size);
+            char *division_list = data_block_division(file_db, list, file_name, file_size);
             craft_ack_response_header(buf);
             strncat(buf, division_list, strlen(division_list));
             strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
+
             send_message(client_desc, buf, strlen(buf));
 
         } else if (strncmp(buf, GET_CMD, strlen(GET_CMD)) == 0) {
 
             strtok(buf, COMMAND_DELIMITER); // we just ignore the GET_CMD header
             char *file_name = strtok(NULL, COMMAND_DELIMITER);
-            //TODO return block range
+            char *file_str = file_to_string(get_file(file_db, file_name));
+            craft_ack_response_header(buf);
+            strncat(buf, file_str, strlen(file_str));
+            strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
+
+            send_message(client_desc, buf, strlen(buf));
 
         } else if (strncmp(buf, REMOVE_CMD, strlen(REMOVE_CMD)) == 0) {
-            //TODO remove from list
+            strtok(buf, COMMAND_DELIMITER); // we just ignore the REMOVE_CMD header
+            char *file_name = strtok(NULL, COMMAND_DELIMITER);
+
+            if (remove_file(file_db, file_name)) {
+                craft_ack_response(buf);
+                // TODO send remove cmd to DR
+            } else
+                craft_nack_response(buf);
+
+            send_message(client_desc, buf, strlen(buf));
 
         } else if (strncmp(buf, QUIT_CMD, strlen(QUIT_CMD)) == 0) {
             client_on = 0;
@@ -146,6 +173,7 @@ void *client_handling(void *args) {
         }
     }
 
+    close(client_desc);
     pthread_exit(NULL);
 }
 
@@ -153,7 +181,7 @@ void *client_handling(void *args) {
 /**
  * Main routine responsible of client requests handling
  */
-void server_routine(DR_List *list) {
+void server_routine(DR_List *list, Grid_File_DB *file_db) {
     int server_sock = server_init(SERVER_PORT);
     struct sockaddr client_addr;
     int client_addr_len = sizeof(client_addr);
@@ -170,6 +198,7 @@ void server_routine(DR_List *list) {
         t_args = (thread_args *) malloc(sizeof(thread_args));
         t_args->list = list;
         t_args->client_desc = client_desc;
+        t_args->file_db = file_db;
         ret = pthread_create(&thread, NULL, client_handling, (void *) t_args);
         PTHREAD_ERROR_HELPER(ret, "Error on pthread creation", TRUE);
         ret = pthread_detach(thread);
@@ -204,7 +233,6 @@ int start_connection_with_dr(Node *pNode, DR_List *list) {
     strncpy(buf, DR_UPDATE_MAP_CMD, strlen(DR_UPDATE_MAP_CMD));
     send_message(sock_d, buf, strlen(DR_UPDATE_MAP_CMD));
     recv_message(sock_d, buf);
-
     if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
         printf("He said yes");
     } else if (strncmp(buf, NOK_RESPONSE, strlen(NOK_RESPONSE)) == 0) {
@@ -223,10 +251,11 @@ int main(int argc, char const *argv[]) {
 
     printf("Start reading configuration file...\n");
     DR_List *list = get_data_repositories_info();
+    Grid_File_DB *file_db = init_db();
     for (Node *node = list->node; node; node = node->next)
         start_connection_with_dr(node, list);
 
-    server_routine(list);
+    server_routine(list, file_db);
 
     return 0;
 }

@@ -7,6 +7,7 @@ void commands_available() {
     printf("Commands available:\n");
     printf("- \"%s\": clear the screen.\n", CLEAR);
     printf("- \"%s\": print this list.\n", HELP);
+    printf("- \"%s\": list all the file.\n", LS);
     printf("- \"%s\": put new file in data repositories.\n", PUT);
     printf("- \"%s\": get file from data repositories.\n", GET);
     printf("- \"%s\": remove file from data repositories.\n", REMOVE);
@@ -82,6 +83,19 @@ void client_routine(int client_desc, char *key, DR_List *list) {
             clear_screen();
         } else if (strncmp(buf, HELP, strlen(HELP)) == 0) {
             commands_available();
+        } else if (strncmp(buf, LS, strlen(LS)) == 0) {
+            craft_request_header(buf, LS_CMD);
+            strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
+
+            send_message(client_desc, buf, strlen(buf));
+
+            recv_message(client_desc, buf);
+            if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
+                // TODO parse and print list
+
+            } else {
+                printf("%sProblem in communication!%s", KRED, KNRM);
+            }
         } else if (strncmp(buf, PUT, strlen(PUT)) == 0) {
             char file_path[FILENAME_MAX];
             printf("Path of the file: ");
@@ -103,16 +117,50 @@ void client_routine(int client_desc, char *key, DR_List *list) {
             send_message(client_desc, buf, strlen(buf));
 
             recv_message(client_desc, buf);
-            // parse list of block and dr
+
+            if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
+                // parse list of block and dr
 //             TODO divide file in blocks and send PUT_CMD to dr
-
-
+            } else {
+                // bad response
+            }
 
         } else if (strncmp(buf, GET, strlen(GET)) == 0) {
+            char filename[FILENAME_MAX];
+            printf("%sFilename: %s", KBLU, KNRM);
+            ret = fgets(filename, sizeof(filename), stdin) != (char *) filename;
+            ERROR_HELPER(ret, "Error on input read", TRUE);
 
+            craft_request_header(buf, GET_CMD);
+            strncat(buf, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
+            strncat(buf, filename, strlen(filename));
+            strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
+            send_message(client_desc, buf, strlen(buf));
+            recv_message(client_desc, buf);
+            if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
+                printf("File info retrieved!\n");
+                //TODO parse list and get from DR
+            } else {
+                printf("File not found!\n");
+            }
 
         } else if (strncmp(buf, REMOVE, strlen(REMOVE)) == 0) {
+            char filename[FILENAME_MAX];
+            printf("%sFilename: %s", KBLU, KNRM);
+            ret = fgets(filename, sizeof(filename), stdin) != (char *) filename;
+            ERROR_HELPER(ret, "Error on input read", TRUE);
 
+            craft_request_header(buf, REMOVE_CMD);
+            strncat(buf, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
+            strncat(buf, filename, strlen(filename));
+            strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
+            send_message(client_desc, buf, strlen(buf));
+            recv_message(client_desc, buf);
+            if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
+                printf("File deleted!\n");
+            } else {
+                printf("File not deleted!\n");
+            }
 
         } else if (strncmp(buf, EXIT_CLIENT, strlen(EXIT_CLIENT)) == 0) {
             quit_command(client_desc);

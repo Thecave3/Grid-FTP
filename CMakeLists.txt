@@ -17,7 +17,7 @@ add_executable(Grid_FTP_Server
         utils/dr_list.h
         utils/colors.h
         utils/common.h
-        utils/protocol.h utils/protocol.c utils/error_helper.h utils/common.c)
+        utils/protocol.h utils/protocol.c utils/error_helper.h utils/common.c utils/file_db.c utils/file_db.h)
 
 add_executable(Grid_FTP_Client
         client/client.c
@@ -26,7 +26,7 @@ add_executable(Grid_FTP_Client
         utils/common.h
         utils/dr_list.c
         utils/dr_list.h
-        utils/protocol.h utils/protocol.c utils/error_helper.h utils/common.c)
+        utils/protocol.h utils/protocol.c utils/error_helper.h utils/common.c utils/file_db.c utils/file_db.h)
 
 add_executable(Grid_FTP_Repository
         data_repository/data_repository.c
@@ -35,7 +35,7 @@ add_executable(Grid_FTP_Repository
         utils/common.h
         utils/dr_list.c
         utils/dr_list.h
-        utils/protocol.h utils/protocol.c utils/error_helper.h utils/common.c)
+        utils/protocol.h utils/protocol.c utils/error_helper.h utils/common.c utils/file_db.c utils/file_db.h)
 
 target_link_libraries(Grid_FTP_Server Threads::Threads)
 target_link_libraries(Grid_FTP_Repository Threads::Threads)

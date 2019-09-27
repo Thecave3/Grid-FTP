@@ -30,6 +30,9 @@
 #define PUT_CMD "put"
 #define REMOVE_CMD "remove"
 #define TRANSFER_CMD "transfer"
+#define TRANSFER_FROM_DR_CMD "dr_transfer"
+#define LS_CMD "ls"
+
 #define QUIT_CMD "quit"
 
 #define COMMAND_DELIMITER ","

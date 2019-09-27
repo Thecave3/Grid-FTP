@@ -9,5 +9,6 @@
 #define GET "get"
 #define REMOVE "rm"
 #define EXIT_CLIENT "exit"
+#define LS "ls"
 
 #endif // GRID_FTP_CLIENT_H
