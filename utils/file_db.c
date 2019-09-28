@@ -35,6 +35,16 @@ static int file_compare(Grid_File *file, char *n) {
     return FALSE;
 }
 
+static int block_compare(Block_File *block, char *n) {
+    size_t bstr_size = strlen(block->block_name);
+    size_t n_size = strlen(n);
+    if (bstr_size != n_size)
+        return FALSE;
+    if (strncmp(block->block_name, n, bstr_size) == 0)
+        return TRUE;
+    return FALSE;
+}
+
 static u_int8_t find_file(Grid_File_DB *db, char *name) {
     for (Grid_File *file = db->head; file; file = file->next)
         if (file_compare(file, name))
@@ -91,11 +101,11 @@ int _remove_file(Grid_File *file, char *name, int is_dr, u_int8_t dr_id) {
         return TRUE;
 
     if (file_compare(file, name)) {
-        Block_File *block = file->head;
+
         Block_File *temp = NULL;
         int ret;
 
-        while (block) {
+        for (Block_File *block = file->head; block; block = block->next) {
             temp = block->next;
             if (is_dr && block->dr_id == dr_id) {
                 ret = remove(block->block_name);
@@ -209,39 +219,31 @@ int move_block(Grid_File_DB *file_db, char *block_name, u_int8_t new_dr_id) {
 }
 
 
-int __remove_block(Block_File *head, char *block_name, u_int8_t caller_id) {
-// TODO finish
-    if (strncmp(head->block_name, block_name, strlen(block_name)) == 0 &&
-        strlen(head->block_name) == strlen(block_name)) {
-        if (head->dr_id == caller_id) {
-            int ret = remove(head->block_name);
-            ERROR_HELPER(ret, "Error on file remove", FALSE);
-        }
-        head = head->next;
-
-        return TRUE;
-    }
-
-
-    return 0;
-}
-
 int _remove_block(Grid_File *file, char *block_name, u_int8_t caller_id) {
-
-    Grid_File *temp_file = file;
-    int is_removed = FALSE;
-    while (temp_file && !is_removed) {
-
-        is_removed = __remove_block(temp_file->head, block_name, caller_id);
-
-        temp_file = temp_file->next;
+    int ret = 0;
+    Block_File *prec_b = NULL;
+    for (Block_File *b = file->head; b; b = b->next) {
+        if (block_compare(b, block_name)) {
+            // update the file list
+            if (b == file->head)
+                file->head = b->next;
+            else
+                prec_b->next = b->next;
+            // remove the block
+            if (b->dr_id == caller_id) {
+                ret = remove(b->block_name);
+                ERROR_HELPER(ret, "Error on block remove", FALSE);
+                free(b);
+                return TRUE;
+            }
+        }
+        prec_b = b;
     }
-
-    return TRUE;
+    return FALSE;
 }
 
 int remove_block(Grid_File_DB *file_db, char *block_name) {
-    return _remove_block(file_db->head, block_name, file_db->id);
+    return _remove_block(get_file(file_db, get_file_name_from_block_name(block_name)), block_name, file_db->id);
 }
 
 int transfer_block(Grid_File_DB *file_db, char *block_name, u_int8_t new_dr_id) {

@@ -37,7 +37,6 @@ char *authentication(int client_desc) {
     char buf[BUFSIZ];
     int ret;
 
-    // TODO username and password as argument + check lengths
     printf("Username: ");
     ret = fgets(username, sizeof(username), stdin) != (char *) username;
     ERROR_HELPER(ret, "Error on input read", TRUE);
