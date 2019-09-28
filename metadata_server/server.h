@@ -12,6 +12,10 @@
 
 #define CNFG_FILE_DELIMITER ","
 
+
+#define SERVER_ID 0
+
+#define SERVER_SECRET "secret_server"
 #define SERVER_PORT 3000
 
 DR_List *get_data_repositories_info();

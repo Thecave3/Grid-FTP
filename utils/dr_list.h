@@ -10,28 +10,28 @@
 
 #define MAX_LEN_IP 32
 
-typedef struct Node {
+typedef struct DR_Node {
     u_int8_t id;
     char *ip;
     u_int16_t port;
-    struct Node *next;
-} Node;
+    struct DR_Node *next;
+} DR_Node;
 
 typedef struct DR_List {
     int size; // size of the list
-    Node *node; // head node of the list
+    DR_Node *node; // head node of the list
 } DR_List;
 
 
 DR_List *new_list();
 
-Node *new_node(u_int8_t id, char *ip, u_int16_t port);
+DR_Node *new_node(u_int8_t id, char *ip, u_int16_t port);
 
 void print_list(DR_List *list);
 
 char *list_to_string(DR_List *list);
 
-void append_to_list(DR_List *list, Node *node);
+void append_to_list(DR_List *list, DR_Node *node);
 
 void delete_node(DR_List *list, u_int8_t id);
 

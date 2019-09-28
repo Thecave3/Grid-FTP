@@ -3,6 +3,7 @@
 //
 
 #include "file_db.h"
+#include "common.h"
 #include "protocol.h"
 
 
@@ -14,11 +15,46 @@ Grid_File_DB *init_db(int is_dr, u_int8_t id) {
     return database;
 }
 
+void file_db_to_string(Grid_File_DB *database, char *buffer) {
+    char *file_str;
+    for (Grid_File *file = database->head; file; file = file->next) {
+        file_str = file_to_string(file);
+        strncat(buffer, file_str, strlen(file_str));
+        if (file->next)
+            strncat(buffer, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
+    }
+}
+
+static int file_compare(Grid_File *file, char *n) {
+    size_t fstr_size = strlen(file->name);
+    size_t n_size = strlen(n);
+    if (fstr_size != n_size)
+        return FALSE;
+    if (strncmp(file->name, n, fstr_size) == 0)
+        return TRUE;
+    return FALSE;
+}
+
+static u_int8_t find_file(Grid_File_DB *db, char *name) {
+    for (Grid_File *file = db->head; file; file = file->next)
+        if (file_compare(file, name))
+            return TRUE;
+    return FALSE;
+}
+
+static Grid_File *get_tail(Grid_File_DB *db) {
+    Grid_File *t = db->head;
+    while (t->next)
+        t = t->next;
+    return t;
+}
+
+
 Grid_File *_get_file(Grid_File *file, char *name) {
     if (!file)
         return file;
 
-    if (strncmp(file->name, name, strlen(file->name)) == 0 && strlen(file->name) == strlen(name))
+    if (file_compare(file, name))
         return file;
 
     return _get_file(file->next, name);
@@ -38,32 +74,23 @@ Grid_File *new_file(char *name, unsigned long size, Block_File *head_block) {
 }
 
 int add_file(Grid_File_DB *database, char *name, long unsigned size, Block_File *head) {
+    if (find_file(database, name))
+        return FALSE;
     if (!database->head) {
         database->head = new_file(name, size, head);
     } else {
-        Grid_File *head_list = database->head;
-
-        while (head_list->next) {
-
-            // yep it sucks, but name is primary key, so if it exists i can't add it to the system
-            if (strncmp(head_list->name, name, strlen(head_list->name)) == 0 &&
-                strlen(head_list->name) == strlen(name))
-                return FALSE;
-
-            head_list = head_list->next;
-        }
-
-        head_list->next = new_file(name, size, head);
+        // We already know that file does not exists in the db
+        Grid_File *tail_list = get_tail(database);
+        tail_list->next = new_file(name, size, head);
     }
     return TRUE;
 }
 
-// TODO check
 int _remove_file(Grid_File *file, char *name, int is_dr, u_int8_t dr_id) {
     if (!file)
         return TRUE;
 
-    if (strncmp(file->name, name, strlen(file->name)) == 0 && strlen(file->name) == strlen(name)) {
+    if (file_compare(file, name)) {
         Block_File *block = file->head;
         Block_File *temp = NULL;
         int ret;
@@ -87,6 +114,16 @@ int remove_file(Grid_File_DB *database, char *name) {
     return _remove_file(database->head, name, database->is_dr, database->id);
 }
 
+// duplicate the string
+// split the string at the separator in order to extract the file_name
+// Output string is dinamically allocated. Remember to FREE.
+char *get_file_name_from_block_name(char *block_name) {
+
+    char *b_str = strndup(block_name, strlen(block_name));
+    char *f_str = strtok(b_str, FILE_BLOCK_SEPARATOR);
+    return f_str;
+}
+
 // block_name,dr_id,start,end
 void block_to_string(char *result, Block_File *block) {
     char dr_id[FILE_SIZE_LIMIT]; // Overpowered probably
@@ -106,9 +143,13 @@ void block_to_string(char *result, Block_File *block) {
 
 }
 
-
+//name,size,block_to_string
 char *file_to_string(Grid_File *file) {
     char *result = (char *) malloc(sizeof(char) * BUFSIZ);
+    char size[FILENAME_MAX];
+    strncat(result, file->name, strlen(file->name));
+    snprintf(size, sizeof(size), "%lu", file->size);
+    strncat(result, size, strlen(size));
 
     for (Block_File *block = file->head; block; block = block->next) {
         block_to_string(result, block);

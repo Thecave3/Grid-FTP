@@ -90,7 +90,7 @@ FILE *recv_file(int socket_desc, char *file_name, long unsigned file_size) {
 }
 
 
-void send_file(int socket_desc, char *file_path, char *file_size) {
+void send_file(int socket_desc, char *file_path, unsigned long file_size) {
     char buf[BUFSIZ];
     int fd, ret;
 
@@ -99,7 +99,7 @@ void send_file(int socket_desc, char *file_path, char *file_size) {
         exit(EXIT_FAILURE);
     }
 
-    long unsigned remain_data = strtol(file_size, NULL, 10);
+    long unsigned remain_data = file_size;
 
     while (remain_data) {
         ret = sendfile(socket_desc, fd, NULL, BUFSIZ);

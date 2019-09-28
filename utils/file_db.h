@@ -35,6 +35,8 @@ typedef struct Grid_File_DB {
 
 Grid_File_DB *init_db(int is_dr, u_int8_t id);
 
+void file_db_to_string(Grid_File_DB *database, char *buffer);
+
 Grid_File *get_file(Grid_File_DB *database, char *name);
 
 Grid_File *new_file(char *name, unsigned long size, Block_File *head_block);
@@ -44,6 +46,8 @@ int add_file(Grid_File_DB *database, char *name, long unsigned size, Block_File 
 int remove_file(Grid_File_DB *database, char *name);
 
 char *file_to_string(Grid_File *file);
+
+char *get_file_name_from_block_name(char *block_name);
 
 void block_to_string(char *result, Block_File *block);
 

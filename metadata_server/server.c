@@ -12,6 +12,32 @@ typedef struct thread_args {
     Grid_File_DB *file_db;
 } thread_args;
 
+void send_command_to_dr(DR_Node *node, char *command, char *cmd_args) {
+    int ret;
+    struct sockaddr_in repo_addr = {};
+
+    int sock_d = socket(AF_INET, SOCK_STREAM, 0);
+    ERROR_HELPER(sock_d, "Error in socket creation", TRUE);
+
+    repo_addr.sin_addr.s_addr = inet_addr(node->ip);
+    repo_addr.sin_family = AF_INET;
+    repo_addr.sin_port = htons(node->port);
+
+    ret = connect(sock_d, (struct sockaddr *) &repo_addr, sizeof(struct sockaddr_in));
+    if (ret < 0) {
+        fprintf(stderr, "DR_Node %d is offline probably.", node->id);
+        return;
+    }
+
+    char buf[BUFSIZ];
+    craft_request_header(buf, command);
+    strncat(buf, cmd_args, strlen(cmd_args));
+    strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
+
+    send_message(sock_d, buf, strlen(buf));
+}
+
+
 DR_List *get_data_repositories_info() {
     FILE *fp;
     char data_info[BUFSIZ];
@@ -71,7 +97,7 @@ char *data_block_division(Grid_File_DB *file_db, DR_List *list, char *name, unsi
     char block_name[FILENAME_MAX];
     unsigned long start_block = 0;
     unsigned long end_block = block_size;
-    Node *node = list->node;
+    DR_Node *node = list->node;
     Block_File *head = NULL;
     Block_File *block_new;
 
@@ -106,15 +132,18 @@ void *client_handling(void *args) {
         recv_message(client_desc, buf);
         if (strncmp(buf, LS_CMD, strlen(LS_CMD)) == 0) {
 
-            // TODO print the filename in a string and send to the client
+            craft_ack_response_header(buf);
+            file_db_to_string(file_db, buf);
+            strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
+
+            send_message(client_desc, buf, strlen(buf));
 
         } else if (strncmp(buf, AUTH_CMD, strlen(AUTH_CMD)) == 0) {
 
             if (client_authentication(buf + strlen(AUTH_CMD) + strlen(COMMAND_DELIMITER))) {
-                char *key = (char *) malloc(sizeof(char) * HASH_LENGTH);
-                strncpy(key, SECRET_KEY, strlen(SECRET_KEY)); // TODO hash of secret
+
                 craft_ack_response_header(buf);
-                strncat(buf, key, strlen(key));
+                strncat(buf, SECRET_KEY, strlen(SECRET_KEY));  // TODO hash of secret
                 strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
             } else {
                 craft_nack_response(buf);
@@ -161,7 +190,14 @@ void *client_handling(void *args) {
 
             if (remove_file(file_db, file_name)) {
                 craft_ack_response(buf);
-                // TODO send remove cmd to DR
+
+                char command_args[BUFSIZ];
+                strncat(command_args, SERVER_SECRET, strlen(SERVER_SECRET)); // TODO hash?
+                strncat(command_args, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
+                strncat(command_args, file_name, strlen(file_name));
+
+                for (DR_Node *node = list->node; node; node = node->next)
+                    send_command_to_dr(node, REMOVE_CMD, command_args);
             } else
                 craft_nack_response(buf);
 
@@ -209,7 +245,7 @@ void server_routine(DR_List *list, Grid_File_DB *file_db) {
 }
 
 
-int start_connection_with_dr(Node *pNode, DR_List *list) {
+int start_connection_with_dr(DR_Node *pNode, DR_List *list) {
     printf("Starting connection with node %u at %s : %u\n", pNode->id, pNode->ip, pNode->port);
     int ret;
     struct sockaddr_in repo_addr = {};
@@ -223,7 +259,7 @@ int start_connection_with_dr(Node *pNode, DR_List *list) {
 
     ret = connect(sock_d, (struct sockaddr *) &repo_addr, sizeof(struct sockaddr_in));
     if (ret < 0) {
-        fprintf(stderr, "Node %d is offline probably.", pNode->id);
+        fprintf(stderr, "DR_Node %d is offline probably.", pNode->id);
         delete_node(list, pNode->id);
         return ret;
     }
@@ -238,7 +274,7 @@ int start_connection_with_dr(Node *pNode, DR_List *list) {
     if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
         printf("He said yes");
     } else if (strncmp(buf, NOK_RESPONSE, strlen(NOK_RESPONSE)) == 0) {
-        fprintf(stderr, "Node %d refused the command \"%s\"", pNode->id, DR_UPDATE_MAP_CMD);
+        fprintf(stderr, "DR_Node %d refused the command \"%s\"", pNode->id, DR_UPDATE_MAP_CMD);
     } else {
         fprintf(stderr, "Unexpected response from node %d : %s", pNode->id, buf);
     }
@@ -253,8 +289,8 @@ int main(int argc, char const *argv[]) {
 
     printf("Start reading configuration file...\n");
     DR_List *list = get_data_repositories_info();
-    Grid_File_DB *file_db = init_db();
-    for (Node *node = list->node; node; node = node->next)
+    Grid_File_DB *file_db = init_db(FALSE, SERVER_ID);
+    for (DR_Node *node = list->node; node; node = node->next)
         start_connection_with_dr(node, list);
 
     server_routine(list, file_db);

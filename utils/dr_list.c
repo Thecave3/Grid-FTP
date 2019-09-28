@@ -17,7 +17,7 @@ DR_List *new_list() {
 void print_list(DR_List *list) {
     printf("************************\n");
     printf("Repository list:\n");
-    for (Node *node = list->node; node; node = node->next)
+    for (DR_Node *node = list->node; node; node = node->next)
         printf("Repository number %d, ip: %s, port: %hu\n", node->id, node->ip, node->port);
     printf("************************\n");
 }
@@ -28,7 +28,7 @@ char *list_to_string(DR_List *list) {
     int current_size = 0;
     char *buf = (char *) calloc(sizeof(char), BUFSIZ);
 
-    for (Node *node = list->node; node; node = node->next) {
+    for (DR_Node *node = list->node; node; node = node->next) {
         current_size += snprintf(buf + current_size, BUFSIZ, "%d%s%s%s%d", node->id, COMMAND_DELIMITER, node->ip,
                                  COMMAND_DELIMITER, node->port);
         if (current_size >= BUFSIZ)
@@ -44,8 +44,8 @@ char *list_to_string(DR_List *list) {
 }
 
 
-Node *new_node(u_int8_t id, char *ip, u_int16_t port) {
-    Node *node = (Node *) malloc(sizeof(Node));
+DR_Node *new_node(u_int8_t id, char *ip, u_int16_t port) {
+    DR_Node *node = (DR_Node *) malloc(sizeof(DR_Node));
     node->id = id;
     node->ip = (char *) malloc(MAX_LEN_IP * sizeof(char));
     strncpy(node->ip, ip, MAX_LEN_IP);
@@ -55,19 +55,19 @@ Node *new_node(u_int8_t id, char *ip, u_int16_t port) {
 }
 
 
-Node *append_node(Node *head, Node *new_node) {
+DR_Node *append_node(DR_Node *head, DR_Node *new_node) {
     if (!head)
         return new_node;
     head->next = append_node(head->next, new_node);
     return head;
 }
 
-void append_to_list(DR_List *list, Node *node) {
+void append_to_list(DR_List *list, DR_Node *node) {
     list->size++;
     list->node = append_node(list->node, node);
 }
 
-Node *_get_node(Node *node, u_int8_t id) {
+DR_Node *_get_node(DR_Node *node, u_int8_t id) {
     if (!node)
         return node;
 
@@ -77,13 +77,13 @@ Node *_get_node(Node *node, u_int8_t id) {
     return _get_node(node->next, id);
 }
 
-Node *get_node(DR_List *list, u_int8_t id) {
+DR_Node *get_node(DR_List *list, u_int8_t id) {
     return _get_node(list->node, id);
 }
 
 void delete_node(DR_List *list, u_int8_t id) {
-    Node *temp = list->node;
-    Node *pre = NULL;
+    DR_Node *temp = list->node;
+    DR_Node *pre = NULL;
 
     if (id == temp->id) {
         list->size--;

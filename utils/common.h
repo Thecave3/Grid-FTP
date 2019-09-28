@@ -33,6 +33,8 @@
 #define HASH_LENGTH 32 // md5 hash length
 #define SECRET_KEY "secret"
 
+#define FILE_BLOCK_SEPARATOR "_"
+
 #define SERVER_ADDR "127.0.0.1"
 #define SERVER_PORT 3000
 
