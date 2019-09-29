@@ -2,6 +2,7 @@
 // Created by Andrea Lacava on 18/09/19.
 //
 
+#include <crypt.h>
 #include "server.h"
 
 sig_atomic_t server_on = 1;
@@ -143,7 +144,8 @@ void *client_handling(void *args) {
             if (client_authentication(buf + strlen(AUTH_CMD) + strlen(COMMAND_DELIMITER))) {
 
                 craft_ack_response_header(buf);
-                strncat(buf, SECRET_KEY, strlen(SECRET_KEY));  // TODO hash of secret
+                char *key = crypt(SECRET_KEY, SALT_SECRET);
+                strncat(buf, key, strlen(key));
                 strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
             } else {
                 craft_nack_response(buf);
@@ -192,7 +194,8 @@ void *client_handling(void *args) {
                 craft_ack_response(buf);
 
                 char command_args[BUFSIZ];
-                strncat(command_args, SERVER_SECRET, strlen(SERVER_SECRET)); // TODO hash?
+                char *key = crypt(SERVER_SECRET, SALT_SECRET);
+                strncat(command_args, key, strlen(key));
                 strncat(command_args, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
                 strncat(command_args, file_name, strlen(file_name));
 

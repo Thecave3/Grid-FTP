@@ -20,6 +20,7 @@
 #include <fcntl.h>
 #include <sys/sendfile.h>
 #include <pthread.h>
+#include <openssl/md5.h>
 
 #include "dr_list.h"
 #include "colors.h"
@@ -32,6 +33,7 @@
 #define PORT_DELIMITER 1024 // just to preserve reserved port
 #define HASH_LENGTH 32 // md5 hash length
 #define SECRET_KEY "secret"
+#define SALT_SECRET "Az"
 
 #define FILE_BLOCK_SEPARATOR "_"
 

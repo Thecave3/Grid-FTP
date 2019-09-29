@@ -90,8 +90,8 @@ void client_routine(int client_desc, char *key, DR_List *list) {
 
             recv_message(client_desc, buf);
             if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
-                // TODO parse and print list
-
+                // Parse and print list
+                printf("%s", buf);
             } else {
                 printf("%sProblem in communication!%s", KRED, KNRM);
             }
@@ -119,9 +119,9 @@ void client_routine(int client_desc, char *key, DR_List *list) {
 
             if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
                 // parse list of block and dr
-//             TODO divide file in blocks and send PUT_CMD to dr
+                // TODO divide file in blocks and send PUT_CMD to dr
             } else {
-                // bad response
+                printf("%sServer has refused command \"%s\"%s", KRED, PUT_CMD, KNRM);
             }
 
         } else if (strncmp(buf, GET, strlen(GET)) == 0) {
@@ -138,7 +138,8 @@ void client_routine(int client_desc, char *key, DR_List *list) {
             recv_message(client_desc, buf);
             if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
                 printf("File info retrieved!\n");
-                //TODO parse list and get from DR
+                // Parse list and get from DR
+                printf("%s", buf);
             } else {
                 printf("File not found!\n");
             }
