@@ -14,7 +14,7 @@ typedef struct thread_args {
 
 void close_server() {
     server_on = FALSE;
-    printf("Closing server! Bye bye");
+    printf("\nClosing server! Bye bye!\n");
     exit(EXIT_SUCCESS);
 }
 
@@ -255,7 +255,7 @@ void server_routine(DR_List *list, Grid_File_DB *file_db) {
 
 
 int start_connection_with_dr(DR_Node *pNode, DR_List *list, Grid_File_DB *file_database) {
-    printf("Starting connection with node %u at %s : %u\n", pNode->id, pNode->ip, pNode->port);
+    printf("Starting connection with node %u at %s:%u\n", pNode->id, pNode->ip, pNode->port);
     int ret;
     struct sockaddr_in repo_addr = {};
 
@@ -268,18 +268,21 @@ int start_connection_with_dr(DR_Node *pNode, DR_List *list, Grid_File_DB *file_d
 
     ret = connect(sock_d, (struct sockaddr *) &repo_addr, sizeof(struct sockaddr_in));
     if (ret < 0) {
-        fprintf(stderr, "DR_Node %d is offline probably.", pNode->id);
+        fprintf(stderr, "DR_Node %d is offline probably.\n", pNode->id);
         delete_node(list, pNode->id);
         return ret;
     }
-
+    printf("I am connected to %hhu\n", pNode->id);
     char buf[BUFSIZ];
     craft_request_header(buf, DR_UPDATE_MAP_CMD);
     char *key = get_key(SECRET_SERVER);
     strncat(buf, key, strlen(key));
+    strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
+
     send_message(sock_d, buf, strlen(buf));
     recv_message(sock_d, buf);
     if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
+        printf("Updating database...\n");
         update_file_db_from_string(file_database, buf + strlen(OK_RESPONSE));
     } else if (strncmp(buf, NOK_RESPONSE, strlen(NOK_RESPONSE)) == 0) {
         fprintf(stderr, "DR_Node %d refused the command \"%s\"", pNode->id, DR_UPDATE_MAP_CMD);

@@ -27,6 +27,7 @@ int server_init(int server_port) {
 }
 
 ssize_t recv_message(int socket_desc, char *buffer) {
+    printf("I am receiving\n");
     int ret;
     int bytes_read = 0;
 
@@ -46,11 +47,12 @@ ssize_t recv_message(int socket_desc, char *buffer) {
 
         bytes_read++;
     }
-
+    printf("Received message: \"%s\"\n", buffer);
     return bytes_read;
 }
 
 ssize_t send_message(int socket_desc, char *buffer, unsigned long msg_length) {
+    printf("I am sending \"%s\"\n", buffer);
     int ret;
     int bytes_written = 0;
 

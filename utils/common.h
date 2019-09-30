@@ -61,6 +61,5 @@ int check_key(char *key, char *secret);
 
 char* get_key(char* secret);
 
-void quit_command(int client_desc);
 
 #endif // GRID_FTP_UTILS_H

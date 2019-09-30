@@ -1,8 +1,17 @@
 #include "client.h"
 
+typedef struct thread_args {
+    DR_List *list;
+    char *key;
+    u_int8_t id_dr;
+    char *filename;
+    unsigned long start, end;
+} thread_args;
+
 sig_atomic_t keep_alive = TRUE;
 
 #define CRITICAL_SECTION_SIZE 1
+
 sem_t sem;
 
 void commands_available() {
@@ -13,12 +22,21 @@ void commands_available() {
     printf("- \"%s\": put new file in data repositories.\n", PUT);
     printf("- \"%s\": get file from data repositories.\n", GET);
     printf("- \"%s\": remove file from data repositories.\n", REMOVE);
-    printf("- \"%s\": remove file from data repositories.\n", EXIT_CLIENT);
+    printf("- \"%s\": close the program.\n", EXIT_CLIENT);
 }
 
 
 void close_client() {
     keep_alive = FALSE;
+}
+
+
+void quit_command(int client_desc) {
+    char buf[BUFSIZ];
+    craft_request(buf, QUIT_CMD);
+    send_message(client_desc, buf, strlen(buf));
+    close(client_desc);
+    close_client();
 }
 
 int client_init(char *address, u_int16_t port) {
@@ -37,6 +55,12 @@ int client_init(char *address, u_int16_t port) {
     return sock_d;
 }
 
+/**
+ * Gets username and password from the user and sends an AUTH_CMD request to the server
+ *
+ * @param client_desc descriptor of the connection with the server
+ * @return a string representing the key for communication with data repositories or NULL if credentials are not good
+ */
 char *authentication(int client_desc) {
     char username[MAX_LEN_UNAME];
     char password[MAX_LEN_PWD];
@@ -63,10 +87,17 @@ char *authentication(int client_desc) {
 
     recv_message(client_desc, buf);
 
-    if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0)
-        return strtok(buf + strlen(OK_RESPONSE), COMMAND_DELIMITER);
-    else
+    if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
+        char *key = strtok(buf + strlen(OK_RESPONSE), COMMAND_DELIMITER);
+        int i = 0;
+        while (key[i] != '\n')
+            i++;
+
+        key[i] = 0;
+        return key;
+    } else {
         return NULL;
+    }
 }
 
 
@@ -91,14 +122,6 @@ void split_file(char *filename, char *block_name, unsigned long start, unsigned 
     fclose(src);
     fclose(dest);
 }
-
-typedef struct thread_args {
-    DR_List *list;
-    char *key;
-    u_int8_t id_dr;
-    char *filename;
-    unsigned long start, end;
-} thread_args;
 
 
 void *send_file_to_dr(void *args) {
@@ -285,28 +308,29 @@ void client_routine(int client_desc, char *key, DR_List *list) {
             }
 
         } else if (strncmp(buf, EXIT_CLIENT, strlen(EXIT_CLIENT)) == 0) {
+
             quit_command(client_desc);
-            printf("Connection closed, bye bye!");
-            keep_alive = FALSE;
+            printf("Connection closed, bye bye!\n");
         } else {
+
             printf("%s", buf);
             printf("%sError unrecognized command\n%s", KRED, KNRM);
             commands_available();
         }
 
     }
-
-    quit_command(client_desc);
-    printf("Connection closed, bye bye!");
 }
 
-
-DR_List *get_data_repositories(int client_desc, char *key) {
+/**
+ * Make a GET_DR_CMD request to the server in order to retrieve the data repositories currently online
+ *
+ * @param client_desc descriptor of the connection with the server
+ * @return DR_List* representing all data repositories active in the grid
+ */
+DR_List *get_data_repositories(int client_desc) {
     char buf[BUFSIZ];
 
-    craft_request_header(buf, GET_DR_CMD);
-    strncat(buf, key, strlen(key));
-    strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
+    craft_request(buf, GET_DR_CMD);
 
     send_message(client_desc, buf, strlen(buf));
 
@@ -355,7 +379,7 @@ int main() {
         return 0;
     }
 
-    DR_List *list = get_data_repositories(client_desc, key);
+    DR_List *list = get_data_repositories(client_desc);
     if (!list) {
         perror("Error in the creation of the list, exiting");
         quit_command(client_desc);

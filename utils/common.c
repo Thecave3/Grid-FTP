@@ -52,8 +52,3 @@ char *get_key(char *secret) {
     return crypt(secret, SALT_SECRET);
 }
 
-
-void quit_command(int client_desc) {
-    send_message(client_desc, QUIT_CMD, strlen(QUIT_CMD));
-    close(client_desc);
-}

@@ -49,8 +49,13 @@ void update_file_db_from_string(Grid_File_DB *database, char *buffer) {
     Grid_File *file = NULL;
 
     char *delimiter = strtok(buffer, COMMAND_DELIMITER);
+
+    if (strncmp(delimiter, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR)) == 0) {
+        printf("No file present in the dr, moving forward\n");
+        return;
+    }
+
     while (delimiter) {
-        
         if (strncmp(delimiter, FILE_DELIMITER, strlen(FILE_DELIMITER)) == 0) {
             filename = strtok(NULL, COMMAND_DELIMITER);
             file = get_file(database, filename);
@@ -72,7 +77,7 @@ void update_file_db_from_string(Grid_File_DB *database, char *buffer) {
             append_block(file->head, block);
 
         } else {
-            fprintf(stderr, "Error in parsing, delimiter: %s\nbuffer: %s\n", delimiter, buffer);
+            fprintf(stderr, "Error in parsing, delimiter: \"%s\". Buffer: \"%s\"\n", delimiter, buffer);
         }
 
         delimiter = strtok(NULL, COMMAND_DELIMITER);

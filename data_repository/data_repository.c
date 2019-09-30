@@ -10,7 +10,7 @@ char *localpath;
 
 void close_server() {
     dr_on = FALSE;
-    printf("Closing server! Bye bye");
+    printf("\nClosing DR! Bye bye!\n");
     exit(EXIT_SUCCESS);
 }
 
@@ -196,15 +196,19 @@ void start_dr_routine(int port, u_int8_t id) {
 
     Grid_File_DB *database = init_db(TRUE, id);
 
+    printf("Start updating database\n");
+
     struct stat st = {0};
     localpath = (char *) malloc(sizeof(char) * FILENAME_MAX);
     snprintf(localpath, sizeof(localpath), "./%d", id);
 
     if (stat(localpath, &st) == -1) {
         // database does not exist, let's create one and move on
+        printf("No db found, I create a new one\n");
         mkdir(localpath, 0700);
     } else {
         // scan folder database in search for files
+        printf("DB found! Let's seek in \n");
         DIR *d;
         struct dirent *dir;
         d = opendir(localpath);
@@ -237,10 +241,13 @@ void start_dr_routine(int port, u_int8_t id) {
         }
     }
 
+    printf("Updating complete, starting dr routine...\n");
+
     while (dr_on) {
         client_desc = accept(dr_sock, NULL, NULL);
         ERROR_HELPER(client_desc, "Error on accepting incoming connection", TRUE);
         if (client_desc < 0) continue;
+        printf("New entity connected!\n");
         t_args = (thread_args *) malloc(sizeof(thread_args));
         t_args->client_desc = client_desc;
         t_args->file_db = database;
