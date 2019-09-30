@@ -9,6 +9,9 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <dirent.h>
+#include <semaphore.h>
+
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
@@ -57,5 +60,7 @@ char **get_file_name(char *file_path);
 int check_key(char *key, char *secret);
 
 char* get_key(char* secret);
+
+void quit_command(int client_desc);
 
 #endif // GRID_FTP_UTILS_H

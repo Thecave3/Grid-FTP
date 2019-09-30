@@ -4,7 +4,6 @@ project(Grid_FTP C)
 set(CMAKE_C_STANDARD 11)
 
 find_package(Threads REQUIRED)
-#find_package(OpenSSL REQUIRED)
 find_package(Doxygen)
 
 include_directories(client)
@@ -43,6 +42,6 @@ target_link_libraries(Grid_FTP_Server Threads::Threads)
 target_link_libraries(Grid_FTP_Repository Threads::Threads)
 target_link_libraries(Grid_FTP_Client Threads::Threads)
 
-#target_link_libraries(Grid_FTP_Server OpenSSL::Crypto)
-#target_link_libraries(Grid_FTP_Repository OpenSSL::Crypto)
-#target_link_libraries(Grid_FTP_Client OpenSSL::Crypto)
+target_link_libraries(Grid_FTP_Server crypt)
+target_link_libraries(Grid_FTP_Repository crypt)
+target_link_libraries(Grid_FTP_Client crypt)

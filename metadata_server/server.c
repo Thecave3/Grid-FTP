@@ -12,6 +12,13 @@ typedef struct thread_args {
     Grid_File_DB *file_db;
 } thread_args;
 
+void close_server() {
+    server_on = FALSE;
+    printf("Closing server! Bye bye");
+    exit(EXIT_SUCCESS);
+}
+
+
 void send_command_to_dr(DR_Node *node, char *command, char *cmd_args) {
     int ret;
     struct sockaddr_in repo_addr = {};
@@ -206,7 +213,7 @@ void *client_handling(void *args) {
             send_message(client_desc, buf, strlen(buf));
 
         } else if (strncmp(buf, QUIT_CMD, strlen(QUIT_CMD)) == 0) {
-            client_on = 0;
+            client_on = FALSE;
         } else { // Unrecognized command
             craft_nack_response(buf);
             send_message(client_desc, buf, strlen(buf));
@@ -274,7 +281,6 @@ int start_connection_with_dr(DR_Node *pNode, DR_List *list, Grid_File_DB *file_d
     recv_message(sock_d, buf);
     if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
         update_file_db_from_string(file_database, buf + strlen(OK_RESPONSE));
-
     } else if (strncmp(buf, NOK_RESPONSE, strlen(NOK_RESPONSE)) == 0) {
         fprintf(stderr, "DR_Node %d refused the command \"%s\"", pNode->id, DR_UPDATE_MAP_CMD);
     } else {
@@ -286,7 +292,16 @@ int start_connection_with_dr(DR_Node *pNode, DR_List *list, Grid_File_DB *file_d
 
 int main(int argc, char const *argv[]) {
 
-    //TODO handling SIGINT
+    struct sigaction sigint_action;
+    sigset_t block_mask;
+
+    sigfillset(&block_mask);
+    sigint_action.sa_handler = close_server;
+    sigint_action.sa_mask = block_mask;
+    sigint_action.sa_flags = 0;
+    int ret = sigaction(SIGINT, &sigint_action, NULL);
+    ERROR_HELPER(ret, "Error on arming SIGINT: ", TRUE);
+
     signal(SIGPIPE, SIG_IGN);
 
     printf("Start reading configuration file...\n");

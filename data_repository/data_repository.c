@@ -6,13 +6,21 @@
 
 sig_atomic_t dr_on = TRUE;
 
+char *localpath;
+
+void close_server() {
+    dr_on = FALSE;
+    printf("Closing server! Bye bye");
+    exit(EXIT_SUCCESS);
+}
+
 typedef struct thread_args {
     int client_desc;
     Grid_File_DB *file_db;
 } thread_args;
 
 void print_usage(const char *file_name) {
-    printf("Usage: \"%s DR_PORT\"\nwith:\n- DR_PORT: port in which the data repository has to be set up (>%d).\n",
+    printf("Usage: \"%s DR_PORT DR_ID\"\nwith:\n- DR_PORT: port in which the data repository has to be set up (>%d).\n- DR_ID: id of data repository (>8).\n",
            file_name, PORT_DELIMITER);
 }
 
@@ -146,7 +154,7 @@ void *dr_routine(void *args) {
             unsigned long start = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
             unsigned long end = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
 
-            if (check_key(key, NULL)) {
+            if (check_key(key, SECRET_CLIENT)) {
                 craft_ack_response(buf);
                 send_message(client_desc, buf, strlen(buf));
 
@@ -166,6 +174,7 @@ void *dr_routine(void *args) {
 
         } else if (strncmp(buf, QUIT_CMD, strlen(QUIT_CMD)) == 0) {
             client_on = FALSE;
+            db_destroyer(file_db);
         } else {
             craft_nack_response(buf);
             send_message(client_desc, buf, strlen(buf));
@@ -177,7 +186,7 @@ void *dr_routine(void *args) {
 }
 
 
-void start_dr_routine(int port) {
+void start_dr_routine(int port, u_int8_t id) {
     // open a socket and wait for auth from server
     int dr_sock = server_init(port);
     int client_desc, ret;
@@ -185,12 +194,56 @@ void start_dr_routine(int port) {
     pthread_t thread;
     thread_args *t_args;
 
+    Grid_File_DB *database = init_db(TRUE, id);
+
+    struct stat st = {0};
+    localpath = (char *) malloc(sizeof(char) * FILENAME_MAX);
+    snprintf(localpath, sizeof(localpath), "./%d", id);
+
+    if (stat(localpath, &st) == -1) {
+        // database does not exist, let's create one and move on
+        mkdir(localpath, 0700);
+    } else {
+        // scan folder database in search for files
+        DIR *d;
+        struct dirent *dir;
+        d = opendir(localpath);
+        if (d) {
+            while ((dir = readdir(d)) != NULL) {
+                if (dir->d_name[0] != '.') { // ignore the hidden file and the back
+                    char *block_path = strndup(localpath, strlen(localpath));
+                    strcat(block_path, "/");
+                    strcat(block_path, dir->d_name);
+
+                    FILE *fp = fopen(block_path, "rb");
+                    fseek(fp, 0, SEEK_END);
+                    long unsigned length = ftell(fp);
+                    printf("%s, size: %lu\n", block_path, length);
+
+                    char *filename = get_file_name_from_block_name(block_path);
+                    Grid_File *existing = get_file(database, filename);
+                    Block_File *block = new_block(block_path, id, 0,
+                                                  0); // TODO start end o per i blocchi forse è meglio il file di configurazione
+                    if (!existing) {
+                        add_file(database, filename, length, block);
+                    } else {
+                        append_block(existing->head, block);
+                    }
+                    fclose(fp);
+
+                }
+            }
+            closedir(d);
+        }
+    }
+
     while (dr_on) {
         client_desc = accept(dr_sock, NULL, NULL);
         ERROR_HELPER(client_desc, "Error on accepting incoming connection", TRUE);
         if (client_desc < 0) continue;
         t_args = (thread_args *) malloc(sizeof(thread_args));
         t_args->client_desc = client_desc;
+        t_args->file_db = database;
         ret = pthread_create(&thread, NULL, dr_routine, (void *) t_args);
         PTHREAD_ERROR_HELPER(ret, "Error on pthread creation", TRUE);
         ret = pthread_detach(thread);
@@ -199,15 +252,28 @@ void start_dr_routine(int port) {
 }
 
 int main(int argc, char const *argv[]) {
-    if (argc == 2) {
+    if (argc == 3) {
         int dr_port = (int) strtol(argv[1], NULL, 10);
+        u_int8_t id = strtol(argv[2], NULL, 10);
         if (dr_port <= PORT_DELIMITER) {
             printf("Invalid port number!\n");
             print_usage(argv[0]);
         } else {
+
+            struct sigaction sigint_action;
+            sigset_t block_mask;
+
+            sigfillset(&block_mask);
+            sigint_action.sa_handler = close_server;
+            sigint_action.sa_mask = block_mask;
+            sigint_action.sa_flags = 0;
+            int ret = sigaction(SIGINT, &sigint_action, NULL);
+            ERROR_HELPER(ret, "Error on arming SIGINT: ", TRUE);
+
+
             signal(SIGPIPE, SIG_IGN);
 
-            start_dr_routine(dr_port);
+            start_dr_routine(dr_port, id);
         }
     } else {
         print_usage(argv[0]);

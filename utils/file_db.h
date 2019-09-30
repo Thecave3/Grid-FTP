@@ -32,6 +32,8 @@ typedef struct Grid_File_DB {
     u_int8_t id;
 } Grid_File_DB;
 
+#define BLOCK_DELIMITER "B"
+#define FILE_DELIMITER "F"
 
 Grid_File_DB *init_db(int is_dr, u_int8_t id);
 

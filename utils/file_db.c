@@ -31,9 +31,52 @@ void file_db_to_string(Grid_File_DB *database, char *buffer) {
     sem_post(&sem);
 }
 
-void update_file_db_from_string(Grid_File_DB *database, char *buffer) {
-// TODO
+int is_a_block_of_file(char *filename, char *blockname) {
+    if (!filename || !blockname)
+        return FALSE;
+    char *block_radix = strtok(blockname, FILE_BLOCK_SEPARATOR);
+    return strncmp(block_radix, filename, strlen(filename));
+}
 
+// F,name,size,B,block_name,dr_id,start,end
+void update_file_db_from_string(Grid_File_DB *database, char *buffer) {
+    char *filename;
+    long unsigned file_size;
+    char *block_name;
+    u_int8_t dr_id;
+    long unsigned start;
+    long unsigned end;
+    Grid_File *file = NULL;
+
+    char *delimiter = strtok(buffer, COMMAND_DELIMITER);
+    while (delimiter) {
+        
+        if (strncmp(delimiter, FILE_DELIMITER, strlen(FILE_DELIMITER)) == 0) {
+            filename = strtok(NULL, COMMAND_DELIMITER);
+            file = get_file(database, filename);
+            if (!file) {
+                file_size = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
+
+                add_file(database, filename, file_size, NULL);
+            }
+        } else if (strncmp(delimiter, BLOCK_DELIMITER, strlen(BLOCK_DELIMITER)) == 0) {
+            block_name = strtok(NULL, COMMAND_DELIMITER);
+            dr_id = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
+            start = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
+            end = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
+            Block_File *block = new_block(block_name, dr_id, start, end);
+            if (!file) {
+                perror("file is null"); // TODO check and remove
+                continue;
+            }
+            append_block(file->head, block);
+
+        } else {
+            fprintf(stderr, "Error in parsing, delimiter: %s\nbuffer: %s\n", delimiter, buffer);
+        }
+
+        delimiter = strtok(NULL, COMMAND_DELIMITER);
+    }
 }
 
 
@@ -156,12 +199,14 @@ char *get_file_name_from_block_name(char *block_name) {
     return f_str;
 }
 
-// block_name,dr_id,start,end
+//B,block_name,dr_id,start,end
 void block_to_string(char *result, Block_File *block) {
     char dr_id[FILE_SIZE_LIMIT]; // Overpowered probably
     char start[FILE_SIZE_LIMIT];
     char end[FILE_SIZE_LIMIT];
 
+    strncat(result, BLOCK_DELIMITER, strlen(BLOCK_DELIMITER));
+    strncat(result, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
     strncat(result, block->block_name, strlen(block->block_name));
     strncat(result, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
     snprintf(dr_id, sizeof(dr_id), "%d", block->dr_id);
@@ -175,10 +220,12 @@ void block_to_string(char *result, Block_File *block) {
 
 }
 
-//name,size,block_to_string
+//F,name,size,block_to_string
 char *file_to_string(Grid_File *file) {
     char *result = (char *) malloc(sizeof(char) * BUFSIZ);
     char size[FILENAME_MAX];
+    strncat(result, FILE_DELIMITER, strlen(FILE_DELIMITER));
+    strncat(result, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
     strncat(result, file->name, strlen(file->name));
     snprintf(size, sizeof(size), "%lu", file->size);
     strncat(result, size, strlen(size));
@@ -206,7 +253,7 @@ Block_File *new_block(char *block_name, u_int8_t dr_id, unsigned long start, uns
 Block_File *_append_block(Block_File *head, Block_File *block_new) {
     if (!head)
         return block_new;
-    head->next = append_block(head->next, block_new);
+    head->next = _append_block(head->next, block_new);
     return head;
 }
 
@@ -278,10 +325,16 @@ int transfer_block(Grid_File_DB *file_db, char *block_name, u_int8_t new_dr_id) 
     return TRUE;
 }
 
-// TODO
-void db_destroyer(Grid_File_DB *file_db) {
-    sem_wait(&sem);
+// TODO test
+void db_destroyer(Grid_File_DB *database) {
 
-    sem_post(&sem);
+    Grid_File *temp = database->head;
+    Grid_File *prec;
+    while (temp->next) {
+        prec = temp;
+        temp = temp->next;
+        remove_file(database, prec->name);
+    }
+
     sem_destroy(&sem);
 }

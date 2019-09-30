@@ -2,6 +2,8 @@
 
 sig_atomic_t keep_alive = TRUE;
 
+#define CRITICAL_SECTION_SIZE 1
+sem_t sem;
 
 void commands_available() {
     printf("Commands available:\n");
@@ -15,16 +17,20 @@ void commands_available() {
 }
 
 
-int client_init() {
+void close_client() {
+    keep_alive = FALSE;
+}
+
+int client_init(char *address, u_int16_t port) {
     int ret;
     struct sockaddr_in repo_addr = {};
 
     int sock_d = socket(AF_INET, SOCK_STREAM, 0);
     ERROR_HELPER(sock_d, "Error in socket creation", TRUE);
 
-    repo_addr.sin_addr.s_addr = inet_addr(SERVER_ADDR);
+    repo_addr.sin_addr.s_addr = inet_addr(address);
     repo_addr.sin_family = AF_INET;
-    repo_addr.sin_port = htons(SERVER_PORT);
+    repo_addr.sin_port = htons(port);
     ret = connect(sock_d, (struct sockaddr *) &repo_addr, sizeof(struct sockaddr_in));
     ERROR_HELPER(ret, "Error in connection", TRUE);
 
@@ -61,13 +67,90 @@ char *authentication(int client_desc) {
         return strtok(buf + strlen(OK_RESPONSE), COMMAND_DELIMITER);
     else
         return NULL;
-
 }
 
 
-void quit_command(int client_desc) {
-    send_message(client_desc, QUIT_CMD, strlen(QUIT_CMD));
-    close(client_desc);
+void split_file(char *filename, char *block_name, unsigned long start, unsigned long end) {
+    FILE *src, *dest;
+    int ch;
+
+    src = fopen(filename, "rb");
+    dest = fopen(block_name, "wb");
+    if (src == NULL || dest == NULL) {
+        ERROR_HELPER(-1, "Error on file open", TRUE);
+    }
+
+    fseek(src, (long) start, SEEK_SET);
+    for (long unsigned i = start; i < end; i++) {
+        ch = getc(src);
+        if (ch == EOF)
+            break;
+        putc(ch, dest);
+    }
+
+    fclose(src);
+    fclose(dest);
+}
+
+typedef struct thread_args {
+    DR_List *list;
+    char *key;
+    u_int8_t id_dr;
+    char *filename;
+    unsigned long start, end;
+} thread_args;
+
+
+void *send_file_to_dr(void *args) {
+    thread_args *t_args = (thread_args *) args;
+    DR_List *list = t_args->list;
+    char *key = t_args->key;
+    u_int8_t id_dr = t_args->id_dr;
+    char *filename = t_args->filename;
+    unsigned long start = t_args->start;
+    unsigned long end = t_args->end;
+
+    char buf[BUFSIZ];
+    char block_name[BUFSIZ];
+    char start_str[BUFSIZ];
+    char end_str[BUFSIZ];
+
+    memset(block_name, 0, strlen(block_name));
+    memset(start_str, 0, strlen(start_str));
+    memset(end_str, 0, strlen(end_str));
+
+    snprintf(block_name, sizeof(block_name), "%s%s%hhu", filename, FILE_BLOCK_SEPARATOR, id_dr);
+    snprintf(block_name, sizeof(start_str), "%lu", start);
+    snprintf(block_name, sizeof(end_str), "%lu", end);
+
+    sem_wait(&sem);
+    split_file(filename, block_name, start, end);
+    sem_post(&sem);
+
+    DR_Node *node = get_node(list, id_dr);
+    int dr_sock = client_init(node->ip, node->port);
+
+    craft_request_header(buf, PUT_CMD);
+    strncat(buf, key, strlen(key));
+    strncat(buf, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
+    strncat(buf, block_name, strlen(block_name));
+    strncat(buf, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
+    strncat(buf, start_str, strlen(start_str));
+    strncat(buf, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
+    strncat(buf, end_str, strlen(end_str));
+    strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
+    send_message(dr_sock, buf, strlen(buf));
+
+    recv_message(dr_sock, buf);
+
+    if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
+        send_file(dr_sock, block_name, end - start);
+    } else {
+        printf("%sData repository #%hhu nacked!%s", KRED, id_dr, KNRM);
+    }
+
+    close(dr_sock);
+    pthread_exit(NULL);
 }
 
 void client_routine(int client_desc, char *key, DR_List *list) {
@@ -119,7 +202,46 @@ void client_routine(int client_desc, char *key, DR_List *list) {
 
             if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
                 // parse list of block and dr
-                // TODO divide file in blocks and send PUT_CMD to dr
+                // dr_id,start_block,final_block
+                sem_init(&sem, 0, CRITICAL_SECTION_SIZE);
+
+                strtok(buf, COMMAND_DELIMITER); // ignore the OK response
+
+                char *part = strtok(NULL, COMMAND_DELIMITER);
+                u_int8_t dr_id;
+                long unsigned start, final;
+                pthread_t thread[100];
+                thread_args *t_args;
+                int index = 0;
+                while (part != NULL && index < 100) {
+                    dr_id = strtol(part, NULL, 10);
+                    start = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
+                    final = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
+
+                    t_args = (thread_args *) malloc(sizeof(thread_args));
+                    t_args->list = list;
+                    t_args->key = key;
+                    t_args->id_dr = dr_id;
+                    t_args->filename = file_name;
+                    t_args->start = start;
+                    t_args->end = final;
+
+                    ret = pthread_create(&thread[index], NULL, send_file_to_dr, (void *) t_args);
+                    PTHREAD_ERROR_HELPER(ret, "Error on pthread creation", TRUE);
+                    ret = pthread_detach(thread[index]);
+                    PTHREAD_ERROR_HELPER(ret, "Error on thread detaching", TRUE);
+
+
+                    part = strtok(NULL, COMMAND_DELIMITER);
+                    index++;
+                }
+
+                for (index = 0; index < 100; index++) {
+                    pthread_join(thread[index], NULL);
+                }
+
+                sem_destroy(&sem);
+
             } else {
                 printf("%sServer has refused command \"%s\"%s", KRED, PUT_CMD, KNRM);
             }
@@ -165,7 +287,7 @@ void client_routine(int client_desc, char *key, DR_List *list) {
         } else if (strncmp(buf, EXIT_CLIENT, strlen(EXIT_CLIENT)) == 0) {
             quit_command(client_desc);
             printf("Connection closed, bye bye!");
-            keep_alive = 0;
+            keep_alive = FALSE;
         } else {
             printf("%s", buf);
             printf("%sError unrecognized command\n%s", KRED, KNRM);
@@ -174,6 +296,8 @@ void client_routine(int client_desc, char *key, DR_List *list) {
 
     }
 
+    quit_command(client_desc);
+    printf("Connection closed, bye bye!");
 }
 
 
@@ -212,7 +336,17 @@ DR_List *get_data_repositories(int client_desc, char *key) {
 
 int main() {
 
-    int client_desc = client_init();
+    struct sigaction sigint_action;
+    sigset_t block_mask;
+
+    sigfillset(&block_mask);
+    sigint_action.sa_handler = close_client;
+    sigint_action.sa_mask = block_mask;
+    sigint_action.sa_flags = 0;
+    int ret = sigaction(SIGINT, &sigint_action, NULL);
+    ERROR_HELPER(ret, "Error on arming SIGINT: ", TRUE);
+
+    int client_desc = client_init(SERVER_ADDR, SERVER_PORT);
 
     char *key = authentication(client_desc);
     if (!key) {

@@ -27,6 +27,8 @@ DR_List *new_list();
 
 DR_Node *new_node(u_int8_t id, char *ip, u_int16_t port);
 
+DR_Node *get_node(DR_List *list, u_int8_t id);
+
 void print_list(DR_List *list);
 
 char *list_to_string(DR_List *list);
