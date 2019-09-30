@@ -12,13 +12,22 @@ typedef struct thread_args {
     Grid_File_DB *file_db;
 } thread_args;
 
+/**
+ * Stub to handle SIGINT
+ */
 void close_server() {
     server_on = FALSE;
     printf("\nClosing server! Bye bye!\n");
     exit(EXIT_SUCCESS);
 }
 
-
+/**
+ * Send a command to a dr
+ *
+ * @param node representing the DR
+ * @param command to be sent
+ * @param cmd_args arguments of the command
+ * */
 void send_command_to_dr(DR_Node *node, char *command, char *cmd_args) {
     int ret;
     struct sockaddr_in repo_addr = {};
@@ -44,7 +53,11 @@ void send_command_to_dr(DR_Node *node, char *command, char *cmd_args) {
     send_message(sock_d, buf, strlen(buf));
 }
 
-
+/**
+ * Open the file and parse the list of the commands to be sent
+ *
+ * @return a list representing all the known and active dr
+ */
 DR_List *get_data_repositories_info() {
     FILE *fp;
     char data_info[BUFSIZ];
@@ -70,6 +83,13 @@ DR_List *get_data_repositories_info() {
     return list;
 }
 
+/**
+ * Open the user database (a file) and check if an authorized user is trying to access
+ *
+ * @param buf with user request
+ *
+ * @return TRUE if user found and password is correct, FALSE elsewhere
+ */
 int client_authentication(char *buf) {
     char *username;
     char *password;
@@ -95,7 +115,16 @@ int client_authentication(char *buf) {
     return FALSE;
 }
 
-// dr_id,start_block,final_block
+/**
+ * Function responsible of the division of the blocks in more parts. This division is made here on server from the point of view of
+ * data structures and on client from the realistic point of view
+ *
+ * @param file_db database to be updated
+ * @param list list of data repositories active
+ * @param filename name of the file to be divided
+ * @param size of filename
+ * @return a string formatted in this way: <dr_id,start_block,final_block>
+ */
 char *data_block_division(Grid_File_DB *file_db, DR_List *list, char *filename, unsigned long size) {
     char *result = (char *) malloc(sizeof(char) * BUFSIZ);
     unsigned long block_size = size / list->size;
@@ -129,6 +158,12 @@ char *data_block_division(Grid_File_DB *file_db, DR_List *list, char *filename, 
     return result;
 }
 
+/**
+ * Function responsible of client connection handling
+ *
+ * @param args see t_args
+ * @return NULL
+ */
 void *client_handling(void *args) {
     thread_args *t_args = (thread_args *) args;
     DR_List *list = t_args->list;
@@ -265,7 +300,16 @@ void server_routine(DR_List *list, Grid_File_DB *file_db) {
     }
 }
 
-
+/**
+ * Creates and handles the first connection between server and data repository represented in pNode in which the block map is updated in the server
+ * Even if the connection remains up and this function returns the descriptor of this connection is not used elsewhere in the program.
+ * If i had more time i would have merged this one with send_command_to_dr created above.
+ *
+ * @param pNode node representing the dr
+ * @param list of dr available
+ * @param file_database to be created/updated at the end of the function
+ * @return descriptor of the connection
+ */
 int start_connection_with_dr(DR_Node *pNode, DR_List *list, Grid_File_DB *file_database) {
     printf("Starting connection with node %u at %s:%u\n", pNode->id, pNode->ip, pNode->port);
     int ret;

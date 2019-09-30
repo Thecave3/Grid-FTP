@@ -15,7 +15,7 @@ sig_atomic_t keep_alive = TRUE;
 sem_t sem;
 
 /**
- *
+ * Prints a list for program usage
  */
 void commands_available() {
     printf("Commands available:\n");
@@ -29,7 +29,7 @@ void commands_available() {
 }
 
 /**
- *
+ * just a stub to close the client
  */
 void close_client() {
     keep_alive = FALSE;
@@ -37,7 +37,9 @@ void close_client() {
 
 /**
  *
- * @param client_desc
+ * Sends the QUIT_CMD to server
+ *
+ * @param client_desc endpoint to alert
  */
 void quit_command(int client_desc) {
     char buf[BUFSIZ];
@@ -48,10 +50,11 @@ void quit_command(int client_desc) {
 }
 
 /**
+ *  Initialize a client
  *
- * @param address
- * @param port
- * @return
+ * @param address target
+ * @param port target
+ * @return descriptor of th socket connected
  */
 int client_init(char *address, u_int16_t port) {
     int ret;
@@ -116,10 +119,12 @@ char *authentication(int client_desc) {
 
 /**
  *
- * @param filename
- * @param block_name
- * @param start
- * @param end
+ * Split the file in more parts before sending it.
+ *
+ * @param filename file to split
+ * @param block_name name of the block to create
+ * @param start initial offeset
+ * @param end final offset
  */
 void split_file(char *filename, char *block_name, unsigned long start, unsigned long end) {
     FILE *src, *dest;
@@ -144,8 +149,9 @@ void split_file(char *filename, char *block_name, unsigned long start, unsigned 
 }
 
 /**
+ *  Thread routine to send the file to the server
  *
- * @param args
+ * @param args see t_args
  * @return
  */
 void *send_file_to_dr(void *args) {
@@ -202,6 +208,9 @@ void *send_file_to_dr(void *args) {
 }
 
 /**
+ * A custom implementation of the ls command of bash
+ *
+ * This function exploit exactly the "ls " command without the "." and ".." folders
  *
  */
 void ls_command() {
@@ -223,12 +232,14 @@ void ls_command() {
 
 /**
  *
- * @param list
- * @param key
- * @param filename
- * @param dr_id
- * @param start
- * @param end
+ * Download function from data repository
+ *
+ * @param list DR_List having all the data repositories
+ * @param key secret key taken from server
+ * @param filename name of the file to retrieve
+ * @param dr_id id of the repository where the file is located
+ * @param start offset
+ * @param end offset
  */
 void get_file_from_dr(DR_List *list, char *key, char *filename, char *dr_id, char *start, char *end) {
     char buf[BUFSIZ];
@@ -255,9 +266,11 @@ void get_file_from_dr(DR_List *list, char *key, char *filename, char *dr_id, cha
 
 /**
  *
- * @param client_desc
- * @param key
- * @param list
+ * Parse user input and sends commands to server
+ *
+ * @param client_desc descriptor of the client connected to the server
+ * @param key secret key taken from server
+ * @param list of known dr in the network
  */
 void client_routine(int client_desc, char *key, DR_List *list) {
     char buf[BUFSIZ];

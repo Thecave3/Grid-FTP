@@ -13,7 +13,10 @@
 #define TRUE 1
 #define FALSE 0
 
-
+/**
+ * Just some useful stuff to handle errors better
+ */
+ 
 #define GENERIC_ERROR_HELPER(cond, errCode, msg, isFatal)                       \
   do {                                                                         \
     if (cond) {                                                                \

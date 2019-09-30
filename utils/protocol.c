@@ -9,8 +9,10 @@
 
 /**
  *
- * @param server_port
- * @return
+ * Initialization of a server.
+ *
+ * @param server_port port in which the server has to be set up
+ * @return the descriptor active of the server
  */
 int server_init(int server_port) {
     int sock_desc, ret, tr = 1;
@@ -39,10 +41,11 @@ int server_init(int server_port) {
 
 
 /**
+ * Receive a message
  *
- * @param socket_desc
- * @param buffer
- * @return
+ * @param socket_desc descriptor of the socket connected
+ * @param buffer in which data has to be put
+ * @return the number of bytes read
  */
 ssize_t recv_message(int socket_desc, char *buffer) {
     int ret;
@@ -69,14 +72,15 @@ ssize_t recv_message(int socket_desc, char *buffer) {
 }
 
 /**
+ * Sends a message.
  *
- * @param socket_desc
- * @param buffer
- * @param msg_length
- * @return
+ * @param socket_desc destination of the message
+ * @param buffer where the content of the message is
+ * @param msg_length length of the message
+ * @return the number of bytes written
  */
 ssize_t send_message(int socket_desc, char *buffer, unsigned long msg_length) {
-    printf("I am sending \"%s\"\n", buffer);
+    //printf("I am sending \"%s\"\n", buffer);
     int ret;
     int bytes_written = 0;
 
@@ -95,11 +99,12 @@ ssize_t send_message(int socket_desc, char *buffer, unsigned long msg_length) {
 }
 
 /**
+ * Receive a file from socket_desc with name file_name and size file_size
  *
- * @param socket_desc
- * @param file_name
- * @param file_size
- * @return
+ * @param socket_desc source of the file
+ * @param file_name name of the file
+ * @param file_size size of the file
+ * @return pointer to the file, NULL in case of errors
  */
 FILE *recv_file(int socket_desc, char *file_name, long unsigned file_size) {
     int ret;
@@ -123,10 +128,11 @@ FILE *recv_file(int socket_desc, char *file_name, long unsigned file_size) {
 }
 
 /**
+ * Sends a file
  *
- * @param socket_desc
- * @param file_path
- * @param file_size
+ * @param socket_desc destination of the file
+ * @param file_path name of the file
+ * @param file_size size of the file
  */
 void send_file(int socket_desc, char *file_path, unsigned long file_size) {
     int fd, ret;
@@ -153,9 +159,10 @@ void send_file(int socket_desc, char *file_path, unsigned long file_size) {
 }
 
 /**
+ * Creates the protocol basic header.
  *
- * @param buffer
- * @param command
+ * @param buffer in which the data has to be put in
+ * @param command to be put in
  */
 void craft_header(char *buffer, char *command) {
     memset(buffer, 0, strlen(buffer));
@@ -163,9 +170,10 @@ void craft_header(char *buffer, char *command) {
 }
 
 /**
+ * Creates a complete command request with no args.
  *
- * @param buffer
- * @param command
+ * @param buffer in which the data has to be put in
+ * @param command to be put in
  */
 void craft_request(char *buffer, char *command) {
     craft_header(buffer, command);
@@ -173,9 +181,10 @@ void craft_request(char *buffer, char *command) {
 }
 
 /**
+ * Create a command request that has to be concluded by user with args.
  *
- * @param buffer
- * @param command
+ * @param buffer in which the data has to be put in
+ * @param command to be put in
  */
 void craft_request_header(char *buffer, char *command) {
     craft_header(buffer, command);
@@ -183,16 +192,18 @@ void craft_request_header(char *buffer, char *command) {
 }
 
 /**
+ * Create a basic header for positive response.
  *
- * @param buffer
+ * @param buffer in which the data has to be put in
  */
 void craft_ack_stub(char *buffer) {
     craft_header(buffer, OK_RESPONSE);
 }
 
 /**
+ * Create a basic header for positive response that has to be completed by user.
  *
- * @param buffer
+ * @param buffer in which the data has to be put in
  */
 void craft_ack_response_header(char *buffer) {
     craft_ack_stub(buffer);
@@ -200,8 +211,9 @@ void craft_ack_response_header(char *buffer) {
 }
 
 /**
+ * Create a complete positive response ready to be sent.
  *
- * @param buffer
+ * @param buffer in which the data has to be put in
  */
 void craft_ack_response(char *buffer) {
     craft_ack_stub(buffer);
@@ -209,11 +221,11 @@ void craft_ack_response(char *buffer) {
 }
 
 /**
+ * Create a complete negative response ready to be sent.
  *
- * @param buffer
+ * @param buffer in which the data has to be put in
  */
 void craft_nack_response(char *buffer) {
-    memset(buffer, 0, strlen(buffer));
-    strncpy(buffer, NOK_RESPONSE, strlen(NOK_RESPONSE));
+    craft_header(buffer, NOK_RESPONSE);
     strncat(buffer, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
 }

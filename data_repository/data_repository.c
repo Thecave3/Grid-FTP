@@ -4,30 +4,41 @@
 
 #include "data_repository.h"
 
+typedef struct thread_args {
+    int client_desc;
+    Grid_File_DB *file_db;
+} thread_args;
+
+
 sig_atomic_t dr_on = TRUE;
 
 char *localpath;
 
+/**
+ * stub to handle SIGINT
+ */
 void close_server() {
     dr_on = FALSE;
     printf("\nClosing DR! Bye bye!\n");
     exit(EXIT_SUCCESS);
 }
 
-typedef struct thread_args {
-    int client_desc;
-    Grid_File_DB *file_db;
-} thread_args;
-
+/**
+ * Print usage in case of misbehaved input
+ *
+ * @param file_name path of the program
+ */
 void print_usage(const char *file_name) {
     printf("Usage: \"%s DR_PORT DR_ID\"\nwith:\n- DR_PORT: port in which the data repository has to be set up (>%d).\n- DR_ID: id of data repository (>8).\n",
            file_name, PORT_DELIMITER);
 }
 
-char *get_dr_key() {
-    return crypt(SECRET_DR, SALT_SECRET);
-}
-
+/**
+ * DR routine to handle the incoming connection of the server and client
+ *
+ * @param args see t_args
+ * @return NULL
+ */
 void *dr_routine(void *args) {
     thread_args *t_args = (thread_args *) args;
     int client_desc = t_args->client_desc;
@@ -75,7 +86,7 @@ void *dr_routine(void *args) {
                 transfer_block(file_db, block_name, strtol(new_dr_id, NULL, 10))) {
 
                 craft_request_header(buf, TRANSFER_FROM_DR_CMD);
-                char *dr_key = get_dr_key();
+                char *dr_key = get_key(SECRET_DR);
                 strncat(buf, dr_key, strlen(dr_key));
                 strncat(buf, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
                 strncat(buf, block_name, strlen(block_name));
@@ -194,7 +205,9 @@ void *dr_routine(void *args) {
     pthread_exit(NULL);
 }
 
-
+/**
+ * checks the internal db of the repository and launches the client handlers
+ */
 void start_dr_routine(int port, u_int8_t id) {
     // open a socket and wait for auth from server
     int dr_sock = server_init(port);
@@ -235,8 +248,10 @@ void start_dr_routine(int port, u_int8_t id) {
 
                     char *filename = get_file_name_from_block_name(block_path);
                     Grid_File *existing = get_file(database, filename);
-                    Block_File *block = new_block(block_path, id, 0,
-                                                  0); // TODO start end o per i blocchi forse è meglio il file di configurazione
+                    Block_File *block = new_block(block_path, id, 0, 0);
+                    /*
+                     * TODO start end destroys part of the logic, a better implementation with MORE TIME would have allowed to use a file configuration for database and a redundant live update in order to improve consistency.
+                    */
                     if (!existing) {
                         add_file(database, filename, length, block);
                     } else {
