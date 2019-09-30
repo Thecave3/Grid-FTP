@@ -17,7 +17,7 @@
 #define GENERIC_ERROR_HELPER(cond, errCode, msg, isFatal)                       \
   do {                                                                         \
     if (cond) {                                                                \
-      fprintf(stderr, "%s%s: %s\n", KRED, msg, strerror(errCode));             \
+      fprintf(stderr, "%s%s: %s%s\n", KRED, msg, strerror(errCode),KNRM);             \
       if(isFatal)                                                              \
         exit(EXIT_FAILURE);                                                     \
     }                                                                          \

@@ -2,9 +2,9 @@
 
 typedef struct thread_args {
     DR_List *list;
-    char *key;
     u_int8_t id_dr;
     char *filename;
+    char *key;
     unsigned long start, end;
 } thread_args;
 
@@ -94,7 +94,7 @@ char *authentication(int client_desc) {
             i++;
 
         key[i] = 0;
-        return key;
+        return strdup(key);
     } else {
         return NULL;
     }
@@ -142,9 +142,9 @@ void *send_file_to_dr(void *args) {
     memset(start_str, 0, strlen(start_str));
     memset(end_str, 0, strlen(end_str));
 
-    snprintf(block_name, sizeof(block_name), "%s%s%hhu", filename, FILE_BLOCK_SEPARATOR, id_dr);
-    snprintf(block_name, sizeof(start_str), "%lu", start);
-    snprintf(block_name, sizeof(end_str), "%lu", end);
+    snprintf(block_name, BUFSIZ, "%s%s%hhu", filename, FILE_BLOCK_SEPARATOR, id_dr);
+    snprintf(start_str, BUFSIZ, "%lu", start);
+    snprintf(end_str, BUFSIZ, "%lu", end);
 
     sem_wait(&sem);
     split_file(filename, block_name, start, end);
@@ -162,6 +162,7 @@ void *send_file_to_dr(void *args) {
     strncat(buf, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
     strncat(buf, end_str, strlen(end_str));
     strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
+
     send_message(dr_sock, buf, strlen(buf));
 
     recv_message(dr_sock, buf);
@@ -176,11 +177,29 @@ void *send_file_to_dr(void *args) {
     pthread_exit(NULL);
 }
 
+void ls_command() {
+    char buf[BUFSIZ];
+    memset(buf, 0, BUFSIZ);
+
+    DIR *d;
+    struct dirent *dir;
+    d = opendir(".");
+    if (d) {
+        while ((dir = readdir(d)) != NULL) {
+            if (dir->d_name[0] != '.') { // ignore the hidden file and the back
+                printf("- %s\n", dir->d_name);
+            }
+        }
+        closedir(d);
+    }
+}
+
 void client_routine(int client_desc, char *key, DR_List *list) {
     char buf[BUFSIZ];
     int ret;
 
     while (keep_alive) {
+        printf("%sType a command: %s", KBLU, KNRM);
         ret = fgets(buf, sizeof(buf), stdin) != (char *) buf;
         ERROR_HELPER(ret, "Error on input read", TRUE);
 
@@ -197,13 +216,17 @@ void client_routine(int client_desc, char *key, DR_List *list) {
             recv_message(client_desc, buf);
             if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
                 // Parse and print list
-                printf("%s", buf);
+                printf("%s", buf + strlen(OK_RESPONSE));
             } else {
                 printf("%sProblem in communication!%s", KRED, KNRM);
             }
         } else if (strncmp(buf, PUT, strlen(PUT)) == 0) {
             char file_path[FILENAME_MAX];
-            printf("Path of the file: ");
+            printf("%sPath of the file: %s", KBLU, KNRM);
+            printf("%sThis directory:\n", KBLU);
+            ls_command();
+            printf("%s", KNRM);
+
             ret = fgets(file_path, sizeof(file_path), stdin) != (char *) file_path;
             ERROR_HELPER(ret, "Error on input read", TRUE);
             file_path[strlen(file_path) - 1] = 0;
@@ -223,40 +246,46 @@ void client_routine(int client_desc, char *key, DR_List *list) {
 
             recv_message(client_desc, buf);
 
+            // ack,B,user.db_1,1,0,30
             if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
                 // parse list of block and dr
                 // dr_id,start_block,final_block
                 sem_init(&sem, 0, CRITICAL_SECTION_SIZE);
 
-                strtok(buf, COMMAND_DELIMITER); // ignore the OK response
-
-                char *part = strtok(NULL, COMMAND_DELIMITER);
+                char *part = strtok(buf, COMMAND_DELIMITER);
+                char *dr_id_str, *start_str, *end_str;
                 u_int8_t dr_id;
                 long unsigned start, final;
                 pthread_t thread[100];
                 thread_args *t_args;
                 int index = 0;
-                while (part != NULL && index < 100) {
-                    dr_id = strtol(part, NULL, 10);
-                    start = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
-                    final = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
+                while (part != NULL) {
+                    strtok(NULL, COMMAND_DELIMITER); // BLOCK_DELIMITER
+                    strtok(NULL, COMMAND_DELIMITER); // block name
+                    dr_id_str = strtok(NULL, COMMAND_DELIMITER);
+                    start_str = strtok(NULL, COMMAND_DELIMITER);
+                    end_str = strtok(NULL, COMMAND_DELIMITER);
 
-                    t_args = (thread_args *) malloc(sizeof(thread_args));
-                    t_args->list = list;
-                    t_args->key = key;
-                    t_args->id_dr = dr_id;
-                    t_args->filename = file_name;
-                    t_args->start = start;
-                    t_args->end = final;
+                    if (dr_id_str != NULL && end_str != NULL && start_str != NULL) {
+                        dr_id = strtol(dr_id_str, NULL, 10);
+                        start = strtol(start_str, NULL, 10);
+                        final = strtol(end_str, NULL, 10);
 
-                    ret = pthread_create(&thread[index], NULL, send_file_to_dr, (void *) t_args);
-                    PTHREAD_ERROR_HELPER(ret, "Error on pthread creation", TRUE);
-                    ret = pthread_detach(thread[index]);
-                    PTHREAD_ERROR_HELPER(ret, "Error on thread detaching", TRUE);
+                        t_args = (thread_args *) malloc(sizeof(thread_args));
+                        t_args->list = list;
+                        t_args->key = key;
+                        t_args->id_dr = dr_id;
+                        t_args->filename = file_name;
+                        t_args->start = start;
+                        t_args->end = final;
 
-
+                        ret = pthread_create(&thread[index], NULL, send_file_to_dr, (void *) t_args);
+                        PTHREAD_ERROR_HELPER(ret, "Error on pthread creation", TRUE);
+                        ret = pthread_detach(thread[index]);
+                        PTHREAD_ERROR_HELPER(ret, "Error on thread detaching", TRUE);
+                        index++;
+                    }
                     part = strtok(NULL, COMMAND_DELIMITER);
-                    index++;
                 }
 
                 for (index = 0; index < 100; index++) {
@@ -266,7 +295,9 @@ void client_routine(int client_desc, char *key, DR_List *list) {
                 sem_destroy(&sem);
 
             } else {
-                printf("%sServer has refused command \"%s\"%s", KRED, PUT_CMD, KNRM);
+                printf("%sServer has refused command \"%s\"%s\n", KRED, PUT_CMD, KNRM);
+                printf("%sSomething strange is going on, I go out\n%s", KRED, KNRM);
+                quit_command(client_desc);
             }
 
         } else if (strncmp(buf, GET, strlen(GET)) == 0) {
@@ -386,7 +417,7 @@ int main() {
         return -1;
     }
 
-    printf("%sGrid FTP Client, type a command:%s\n", KBLU, KNRM);
+    printf("%sGrid FTP Client%s\n", KBLU, KNRM);
 
     client_routine(client_desc, key, list);
 

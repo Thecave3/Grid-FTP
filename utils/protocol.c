@@ -27,7 +27,6 @@ int server_init(int server_port) {
 }
 
 ssize_t recv_message(int socket_desc, char *buffer) {
-    printf("I am receiving\n");
     int ret;
     int bytes_read = 0;
 
@@ -47,12 +46,12 @@ ssize_t recv_message(int socket_desc, char *buffer) {
 
         bytes_read++;
     }
-    printf("Received message: \"%s\"\n", buffer);
+    //printf("Received message: \"%s\"\n", buffer);
     return bytes_read;
 }
 
 ssize_t send_message(int socket_desc, char *buffer, unsigned long msg_length) {
-    printf("I am sending \"%s\"\n", buffer);
+    //printf("I am sending \"%s\"\n", buffer);
     int ret;
     int bytes_written = 0;
 
@@ -76,7 +75,7 @@ FILE *recv_file(int socket_desc, char *file_name, long unsigned file_size) {
     FILE *fp;
     if (!(fp = fopen(file_name, "wb"))) {
         fprintf(stderr,
-                "Can't open userdb at \"%s\". Wrong path?\n", file_name);
+                "Can't open file at \"%s\". Wrong path?\n", file_name);
         exit(EXIT_FAILURE);
     }
     long unsigned remain_data = file_size;
@@ -84,7 +83,7 @@ FILE *recv_file(int socket_desc, char *file_name, long unsigned file_size) {
     while ((remain_data > 0) && ((ret = recv(socket_desc, buf, BUFSIZ, 0)) > 0)) {
         fwrite(buf, sizeof(char), ret, fp);
         remain_data -= ret;
-        fprintf(stdout, "Receive %d bytes and we hope :- %lu bytes\n", ret, remain_data);
+        fprintf(stdout, "Received %d bytes, remaining :- %lu bytes\n", ret, remain_data);
     }
     fclose(fp);
 
@@ -93,7 +92,6 @@ FILE *recv_file(int socket_desc, char *file_name, long unsigned file_size) {
 
 
 void send_file(int socket_desc, char *file_path, unsigned long file_size) {
-    char buf[BUFSIZ];
     int fd, ret;
 
     if (!(fd = open(file_path, O_RDONLY))) {

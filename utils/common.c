@@ -13,17 +13,22 @@ void clear_screen() {
 
 
 char **get_file_name(char *file_path) {
+
     // we use a low level operation for file instead of fopen()
     // since sendfile wants a descriptor and not a pointer to file (FILE*).
     struct stat file_stat;
     int fd, ret;
-    if (!(fd = open(file_path, O_RDONLY))) {
+    if ((fd = open(file_path, O_RDONLY)) < 0) {
         fprintf(stderr, "Can't open file at \"%s\". Wrong path?\n", file_path);
         return NULL;
     }
 
+    printf("File opened.\n");
+
     ret = fstat(fd, &file_stat);
-    ERROR_HELPER(ret, "Error on retrieving file statistics", TRUE);
+    ERROR_HELPER(ret, "Error on retrieving file statistics", FALSE);
+    if (ret < 0)
+        return NULL;
     close(fd);
 
     char *file_size = (char *) malloc(FILE_SIZE_LIMIT * sizeof(char));

@@ -157,16 +157,24 @@ void *dr_routine(void *args) {
             if (check_key(key, SECRET_CLIENT)) {
                 craft_ack_response(buf);
                 send_message(client_desc, buf, strlen(buf));
+                char *f_path = localpath;
+                strncat(f_path, "/", strlen("/"));
+                strncat(f_path, block_name, strlen(block_name));
 
-                Block_File *block = new_block(block_name, file_db->id, start, end);
-                recv_file(client_desc, block_name, end - start);
+                Block_File *block = new_block(f_path, file_db->id, start, end);
+                recv_file(client_desc, f_path, end - start);
+                f_path = localpath;
                 char *file_name = get_file_name_from_block_name(block_name);
-                if (add_file(file_db, file_name, end - start, block)) {
+                strncat(f_path, "/", strlen("/"));
+                strncat(f_path, file_name, strlen(file_name));
+
+                if (!add_file(file_db, f_path, end - start, block)) {
                     // file already exists, just add block and update size of file
-                    Grid_File *file = get_file(file_db, file_name);
+                    Grid_File *file = get_file(file_db, f_path);
                     file->size += (end - start);
                     append_block(file->head, block);
                 }
+                break;
             } else {
                 craft_nack_response(buf);
                 send_message(client_desc, buf, strlen(buf));

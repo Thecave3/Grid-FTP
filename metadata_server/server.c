@@ -96,12 +96,12 @@ int client_authentication(char *buf) {
 }
 
 // dr_id,start_block,final_block
-char *data_block_division(Grid_File_DB *file_db, DR_List *list, char *name, unsigned long size) {
+char *data_block_division(Grid_File_DB *file_db, DR_List *list, char *filename, unsigned long size) {
     char *result = (char *) malloc(sizeof(char) * BUFSIZ);
     unsigned long block_size = size / list->size;
     unsigned long remaining = size % list->size;
 
-    char block_name[FILENAME_MAX];
+    char *block_name = (char *) malloc(sizeof(char) * FILENAME_MAX);
     unsigned long start_block = 0;
     unsigned long end_block = block_size;
     DR_Node *node = list->node;
@@ -109,6 +109,7 @@ char *data_block_division(Grid_File_DB *file_db, DR_List *list, char *name, unsi
     Block_File *block_new;
 
     for (int i = 0; i < list->size; i++, node = node->next) {
+        snprintf(block_name, FILENAME_MAX, "%s%s%hhu", filename, FILE_BLOCK_SEPARATOR, node->id);
         block_new = new_block(block_name, node->id, start_block, end_block);
         head = append_block(head, block_new);
         block_to_string(result, block_new);
@@ -119,10 +120,11 @@ char *data_block_division(Grid_File_DB *file_db, DR_List *list, char *name, unsi
         } else {
             end_block += block_size;
             strncat(result, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
+            block_name = strdup(filename);
         }
     }
 
-    add_file(file_db, name, size, head);
+    add_file(file_db, filename, size, head);
 
     return result;
 }
@@ -184,7 +186,14 @@ void *client_handling(void *args) {
 
             strtok(buf, COMMAND_DELIMITER); // we just ignore the GET_CMD header
             char *file_name = strtok(NULL, COMMAND_DELIMITER);
-            char *file_str = file_to_string(get_file(file_db, file_name));
+            file_name[strlen(file_name) - 1] = 0; // remove \n
+            Grid_File *file = get_file(file_db, file_name);
+            if (file == NULL) {
+                craft_nack_response(buf);
+                send_message(client_desc, buf, strlen(buf));
+                continue;
+            }
+            char *file_str = file_to_string(file);
 
             craft_ack_response_header(buf);
             strncat(buf, file_str, strlen(file_str));
@@ -283,7 +292,7 @@ int start_connection_with_dr(DR_Node *pNode, DR_List *list, Grid_File_DB *file_d
     recv_message(sock_d, buf);
     if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
         printf("Updating database...\n");
-        update_file_db_from_string(file_database, buf + strlen(OK_RESPONSE));
+        update_file_db_from_string(file_database, buf);
     } else if (strncmp(buf, NOK_RESPONSE, strlen(NOK_RESPONSE)) == 0) {
         fprintf(stderr, "DR_Node %d refused the command \"%s\"", pNode->id, DR_UPDATE_MAP_CMD);
     } else {
