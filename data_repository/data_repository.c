@@ -135,7 +135,7 @@ void *dr_routine(void *args) {
             strtok(buf, COMMAND_DELIMITER);
             char *key = strtok(NULL, COMMAND_DELIMITER);
             char *block_name = strtok(NULL, COMMAND_DELIMITER);
-            if (check_key(key, NULL)) {
+            if (check_key(key, SECRET_CLIENT)) {
                 Block_File *block_file = get_block(file_db, block_name);
 
                 craft_ack_response(buf);

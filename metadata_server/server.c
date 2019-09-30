@@ -189,15 +189,17 @@ void *client_handling(void *args) {
             file_name[strlen(file_name) - 1] = 0; // remove \n
             Grid_File *file = get_file(file_db, file_name);
             if (file == NULL) {
-                printf("%s era null", file_name);
+                printf("\"%s\" requested from client, but it was null", file_name);
                 craft_nack_response(buf);
                 send_message(client_desc, buf, strlen(buf));
                 continue;
             }
-            char *file_str = file_to_string(file);
-
             craft_ack_response_header(buf);
-            strncat(buf, file_str, strlen(file_str));
+            for (Block_File *block = file->head; block; block = block->next) {
+                block_to_string(buf, block);
+                if (block->next)
+                    strncat(buf, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
+            }
             strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
 
             send_message(client_desc, buf, strlen(buf));

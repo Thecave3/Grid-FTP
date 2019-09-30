@@ -14,6 +14,9 @@ sig_atomic_t keep_alive = TRUE;
 
 sem_t sem;
 
+/**
+ *
+ */
 void commands_available() {
     printf("Commands available:\n");
     printf("- \"%s\": clear the screen.\n", CLEAR);
@@ -25,12 +28,17 @@ void commands_available() {
     printf("- \"%s\": close the program.\n", EXIT_CLIENT);
 }
 
-
+/**
+ *
+ */
 void close_client() {
     keep_alive = FALSE;
 }
 
-
+/**
+ *
+ * @param client_desc
+ */
 void quit_command(int client_desc) {
     char buf[BUFSIZ];
     craft_request(buf, QUIT_CMD);
@@ -39,6 +47,12 @@ void quit_command(int client_desc) {
     close_client();
 }
 
+/**
+ *
+ * @param address
+ * @param port
+ * @return
+ */
 int client_init(char *address, u_int16_t port) {
     int ret;
     struct sockaddr_in repo_addr = {};
@@ -100,7 +114,13 @@ char *authentication(int client_desc) {
     }
 }
 
-
+/**
+ *
+ * @param filename
+ * @param block_name
+ * @param start
+ * @param end
+ */
 void split_file(char *filename, char *block_name, unsigned long start, unsigned long end) {
     FILE *src, *dest;
     int ch;
@@ -123,7 +143,11 @@ void split_file(char *filename, char *block_name, unsigned long start, unsigned 
     fclose(dest);
 }
 
-
+/**
+ *
+ * @param args
+ * @return
+ */
 void *send_file_to_dr(void *args) {
     thread_args *t_args = (thread_args *) args;
     DR_List *list = t_args->list;
@@ -177,6 +201,9 @@ void *send_file_to_dr(void *args) {
     pthread_exit(NULL);
 }
 
+/**
+ *
+ */
 void ls_command() {
     char buf[BUFSIZ];
     memset(buf, 0, BUFSIZ);
@@ -194,6 +221,44 @@ void ls_command() {
     }
 }
 
+/**
+ *
+ * @param list
+ * @param key
+ * @param filename
+ * @param dr_id
+ * @param start
+ * @param end
+ */
+void get_file_from_dr(DR_List *list, char *key, char *filename, char *dr_id, char *start, char *end) {
+    char buf[BUFSIZ];
+    craft_request_header(buf, GET_CMD);
+    strncat(buf, key, strlen(key));
+    strncat(buf, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
+    strncat(buf, filename, strlen(filename));
+
+    DR_Node *node = get_node(list, strtol(dr_id, NULL, 10));
+    int dr_sock = client_init(node->ip, node->port);
+
+    send_message(dr_sock, buf, strlen(buf));
+
+    recv_message(dr_sock, buf);
+
+    if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
+        long unsigned size = strtol(end, NULL, 10) - strtol(start, NULL, 10);
+        recv_file(dr_sock, filename, size);
+        printf("File received!\n");
+    } else {
+        printf("%sData repository refused%s!", KRED, KNRM);
+    }
+}
+
+/**
+ *
+ * @param client_desc
+ * @param key
+ * @param list
+ */
 void client_routine(int client_desc, char *key, DR_List *list) {
     char buf[BUFSIZ];
     int ret;
@@ -208,14 +273,12 @@ void client_routine(int client_desc, char *key, DR_List *list) {
         } else if (strncmp(buf, HELP, strlen(HELP)) == 0) {
             commands_available();
         } else if (strncmp(buf, LS, strlen(LS)) == 0) {
-            craft_request_header(buf, LS_CMD);
-            strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
-
+            craft_request(buf, LS_CMD);
             send_message(client_desc, buf, strlen(buf));
 
             recv_message(client_desc, buf);
             if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
-                printf("%s", buf + strlen(OK_RESPONSE)+strlen(COMMAND_DELIMITER));
+                printf("%s", buf + strlen(OK_RESPONSE) + strlen(COMMAND_DELIMITER));
             } else {
                 printf("%sProblem in communication!%s", KRED, KNRM);
             }
@@ -306,17 +369,30 @@ void client_routine(int client_desc, char *key, DR_List *list) {
             ERROR_HELPER(ret, "Error on input read", TRUE);
 
             craft_request_header(buf, GET_CMD);
-            strncat(buf, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
             strncat(buf, filename, strlen(filename));
             strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
+
             send_message(client_desc, buf, strlen(buf));
+
             recv_message(client_desc, buf);
+
             if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
                 printf("File info retrieved!\n");
-                // TODO Parse list and get from DR
-                printf("%s", buf);
+                strtok(buf, COMMAND_DELIMITER); // OK RESPONSE
+                char *delimiter = strtok(NULL, COMMAND_DELIMITER); // Block delimiter
+                char *block_name, *dr_id_str, *start_str, *end_str;
+                while (delimiter != NULL && strncmp(delimiter, BLOCK_DELIMITER, strlen(BLOCK_DELIMITER)) == 0) {
+                    block_name = strtok(NULL, COMMAND_DELIMITER);// block name
+                    dr_id_str = strtok(NULL, COMMAND_DELIMITER); // dr id
+                    start_str = strtok(NULL, COMMAND_DELIMITER); // start
+                    end_str = strtok(NULL, COMMAND_DELIMITER); // end
+
+                    get_file_from_dr(list, key, block_name, dr_id_str, start_str, end_str);
+
+                    delimiter = strtok(NULL, COMMAND_DELIMITER);
+                }
             } else {
-                printf("File not found!\n");
+                printf("File not found, server has answered with nack!\n");
             }
 
         } else if (strncmp(buf, REMOVE, strlen(REMOVE)) == 0) {

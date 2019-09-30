@@ -7,6 +7,11 @@
 #include <sys/sendfile.h>
 #include "protocol.h"
 
+/**
+ *
+ * @param server_port
+ * @return
+ */
 int server_init(int server_port) {
     int sock_desc, ret, tr = 1;
     struct sockaddr_in *serv_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
@@ -32,6 +37,13 @@ int server_init(int server_port) {
     return sock_desc;
 }
 
+
+/**
+ *
+ * @param socket_desc
+ * @param buffer
+ * @return
+ */
 ssize_t recv_message(int socket_desc, char *buffer) {
     int ret;
     int bytes_read = 0;
@@ -56,6 +68,13 @@ ssize_t recv_message(int socket_desc, char *buffer) {
     return bytes_read;
 }
 
+/**
+ *
+ * @param socket_desc
+ * @param buffer
+ * @param msg_length
+ * @return
+ */
 ssize_t send_message(int socket_desc, char *buffer, unsigned long msg_length) {
     printf("I am sending \"%s\"\n", buffer);
     int ret;
@@ -75,6 +94,13 @@ ssize_t send_message(int socket_desc, char *buffer, unsigned long msg_length) {
     return bytes_written;
 }
 
+/**
+ *
+ * @param socket_desc
+ * @param file_name
+ * @param file_size
+ * @return
+ */
 FILE *recv_file(int socket_desc, char *file_name, long unsigned file_size) {
     int ret;
     char buf[BUFSIZ];
@@ -96,7 +122,12 @@ FILE *recv_file(int socket_desc, char *file_name, long unsigned file_size) {
     return fp;
 }
 
-
+/**
+ *
+ * @param socket_desc
+ * @param file_path
+ * @param file_size
+ */
 void send_file(int socket_desc, char *file_path, unsigned long file_size) {
     int fd, ret;
 
@@ -121,36 +152,66 @@ void send_file(int socket_desc, char *file_path, unsigned long file_size) {
     close(fd);
 }
 
-
+/**
+ *
+ * @param buffer
+ * @param command
+ */
 void craft_header(char *buffer, char *command) {
     memset(buffer, 0, strlen(buffer));
     strncpy(buffer, command, strlen(command));
 }
 
+/**
+ *
+ * @param buffer
+ * @param command
+ */
 void craft_request(char *buffer, char *command) {
     craft_header(buffer, command);
     strncat(buffer, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
 }
 
+/**
+ *
+ * @param buffer
+ * @param command
+ */
 void craft_request_header(char *buffer, char *command) {
     craft_header(buffer, command);
     strncat(buffer, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
 }
 
+/**
+ *
+ * @param buffer
+ */
 void craft_ack_stub(char *buffer) {
     craft_header(buffer, OK_RESPONSE);
 }
 
+/**
+ *
+ * @param buffer
+ */
 void craft_ack_response_header(char *buffer) {
     craft_ack_stub(buffer);
     strncat(buffer, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
 }
 
+/**
+ *
+ * @param buffer
+ */
 void craft_ack_response(char *buffer) {
     craft_ack_stub(buffer);
     strncat(buffer, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
 }
 
+/**
+ *
+ * @param buffer
+ */
 void craft_nack_response(char *buffer) {
     memset(buffer, 0, strlen(buffer));
     strncpy(buffer, NOK_RESPONSE, strlen(NOK_RESPONSE));
