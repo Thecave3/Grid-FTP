@@ -189,6 +189,7 @@ void *client_handling(void *args) {
             file_name[strlen(file_name) - 1] = 0; // remove \n
             Grid_File *file = get_file(file_db, file_name);
             if (file == NULL) {
+                printf("%s era null", file_name);
                 craft_nack_response(buf);
                 send_message(client_desc, buf, strlen(buf));
                 continue;

@@ -40,16 +40,16 @@ int is_a_block_of_file(char *filename, char *blockname) {
 
 // F,name,size,B,block_name,dr_id,start,end
 void update_file_db_from_string(Grid_File_DB *database, char *buffer) {
-    char *filename;
-    long unsigned file_size;
-    char *block_name;
-    u_int8_t dr_id;
-    long unsigned start;
-    long unsigned end;
+    char *filename = NULL;
+    long unsigned file_size = 0;
+    u_int8_t dr_id = 0;
+    long unsigned start = 0;
+    long unsigned end = 0;
     Grid_File *file = NULL;
-    strtok(buffer, COMMAND_DELIMITER); // OK RESPONSE
+    char *delimiter = NULL;
 
-    char *delimiter = strtok(NULL, COMMAND_DELIMITER);
+    strtok(buffer, COMMAND_DELIMITER); // OK RESPONSE
+    delimiter = strtok(NULL, COMMAND_DELIMITER);
 
     if (strncmp(delimiter, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR)) == 0) {
         printf("No file present in the dr, moving forward\n");
@@ -60,25 +60,21 @@ void update_file_db_from_string(Grid_File_DB *database, char *buffer) {
         if (strncmp(delimiter, FILE_DELIMITER, strlen(FILE_DELIMITER)) == 0) {
             filename = strtok(NULL, COMMAND_DELIMITER);
             file = get_file(database, filename);
-            if (!file) {
-                file_size = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
-
+            file_size = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
+            if (!file)
                 add_file(database, filename, file_size, NULL);
-            }
+
         } else if (strncmp(delimiter, BLOCK_DELIMITER, strlen(BLOCK_DELIMITER)) == 0) {
-            block_name = strtok(NULL, COMMAND_DELIMITER);
+            filename = strtok(NULL, COMMAND_DELIMITER);
             dr_id = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
             start = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
             end = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
-            Block_File *block = new_block(block_name, dr_id, start, end);
-            if (!file) {
-                perror("file is null"); // TODO check and remove
-                continue;
-            }
+            Block_File *block = new_block(filename, dr_id, start, end);
+            file = get_file(database, get_file_name_from_block_name(filename));
             append_block(file->head, block);
 
         } else {
-            fprintf(stderr, "Error in parsing, delimiter: \"%s\".\n", delimiter);
+            fprintf(stderr, "Error in parsing, ignoring  delimiter: \"%s\".\n", delimiter);
         }
 
         delimiter = strtok(NULL, COMMAND_DELIMITER);
@@ -236,6 +232,7 @@ char *file_to_string(Grid_File *file) {
     strncat(result, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
     snprintf(size, sizeof(size), "%lu", file->size);
     strncat(result, size, strlen(size));
+    strncat(result, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
 
     for (Block_File *block = file->head; block; block = block->next) {
         block_to_string(result, block);

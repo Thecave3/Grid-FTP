@@ -184,10 +184,11 @@ void *dr_routine(void *args) {
             client_on = FALSE;
             db_destroyer(file_db);
         } else {
+            printf("Command Unrecognized\n");
+            fprintf(stderr, "%s", buf);
+
             craft_nack_response(buf);
             send_message(client_desc, buf, strlen(buf));
-            perror("Command Unrecognized\n");
-            fprintf(stderr, "%s", buf);
         }
     }
     pthread_exit(NULL);

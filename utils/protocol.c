@@ -12,6 +12,15 @@ int server_init(int server_port) {
     struct sockaddr_in *serv_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
     sock_desc = socket(AF_INET, SOCK_STREAM, 0);
     ERROR_HELPER(sock_desc, "Error on socket creation", TRUE);
+//    int set = 1;
+//    setsockopt(sock_desc, SOL_SOCKET, MSG_NOSIGNAL, (void *) &set, sizeof(int));
+    int tr = 1;
+
+// kill "Address already in use" error message
+    if (setsockopt(sock_desc, SOL_SOCKET, SO_REUSEADDR, &tr, sizeof(int)) == -1) {
+        perror("setsockopt");
+        exit(1);
+    }
 
     serv_addr->sin_family = AF_INET;
     serv_addr->sin_addr.s_addr = htonl(INADDR_ANY);
@@ -51,7 +60,7 @@ ssize_t recv_message(int socket_desc, char *buffer) {
 }
 
 ssize_t send_message(int socket_desc, char *buffer, unsigned long msg_length) {
-    //printf("I am sending \"%s\"\n", buffer);
+    printf("I am sending \"%s\"\n", buffer);
     int ret;
     int bytes_written = 0;
 

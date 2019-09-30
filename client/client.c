@@ -222,10 +222,10 @@ void client_routine(int client_desc, char *key, DR_List *list) {
             }
         } else if (strncmp(buf, PUT, strlen(PUT)) == 0) {
             char file_path[FILENAME_MAX];
-            printf("%sPath of the file: %s", KBLU, KNRM);
             printf("%sThis directory:\n", KBLU);
             ls_command();
             printf("%s", KNRM);
+            printf("%sPath of the file: %s", KBLU, KNRM);
 
             ret = fgets(file_path, sizeof(file_path), stdin) != (char *) file_path;
             ERROR_HELPER(ret, "Error on input read", TRUE);
