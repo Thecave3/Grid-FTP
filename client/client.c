@@ -210,7 +210,7 @@ DR_List *get_data_repositories(int client_desc, char *key) {
     }
 }
 
-int main(/*int argc, char const *argv[]*/) {
+int main() {
 
     int client_desc = client_init();
 

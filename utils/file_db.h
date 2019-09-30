@@ -65,4 +65,6 @@ void db_destroyer(Grid_File_DB* file_db);
 
 int transfer_block(Grid_File_DB *file_db, char *block_name, u_int8_t new_dr_id);
 
+void update_file_db_from_string(Grid_File_DB *database, char *buffer);
+
 #endif //GRID_FTP_FILE_DB_H

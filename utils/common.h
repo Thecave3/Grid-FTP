@@ -45,6 +45,7 @@
 
 #define SERVER_ADDR "127.0.0.1"
 #define SERVER_PORT 3000
+#define SERVER_ID 0
 
 #define MAX_LEN_UNAME 16
 #define MAX_LEN_PWD 16
@@ -54,5 +55,7 @@ void clear_screen();
 char **get_file_name(char *file_path);
 
 int check_key(char *key, char *secret);
+
+char* get_key(char* secret);
 
 #endif // GRID_FTP_UTILS_H

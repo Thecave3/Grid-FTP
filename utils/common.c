@@ -47,3 +47,7 @@ int check_key(char *key, char *secret) {
 
     return strncmp(enc_key, enc_secret, strlen(enc_key)) == 0;
 }
+
+char *get_key(char *secret) {
+    return crypt(secret, SALT_SECRET);
+}

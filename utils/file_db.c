@@ -31,6 +31,12 @@ void file_db_to_string(Grid_File_DB *database, char *buffer) {
     sem_post(&sem);
 }
 
+void update_file_db_from_string(Grid_File_DB *database, char *buffer) {
+// TODO
+
+}
+
+
 static int file_compare(Grid_File *file, char *n) {
     size_t fstr_size = strlen(file->name);
     size_t n_size = strlen(n);
@@ -272,6 +278,7 @@ int transfer_block(Grid_File_DB *file_db, char *block_name, u_int8_t new_dr_id) 
     return TRUE;
 }
 
+// TODO
 void db_destroyer(Grid_File_DB *file_db) {
     sem_wait(&sem);
 

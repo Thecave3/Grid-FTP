@@ -70,7 +70,7 @@ int client_authentication(char *buf) {
     char data_info[BUFSIZ];
     if (!(fp = fopen(USERLIST_FILE_PATH, "r"))) {
         fprintf(stderr,
-                "%sCan't open userdb at \"%s\". Wrong path?%s\n", KRED,
+                "%sCan't open user database at \"%s\". Wrong path?%s\n", KRED,
                 USERLIST_FILE_PATH, KNRM);
         exit(EXIT_FAILURE);
     }
@@ -126,7 +126,7 @@ void *client_handling(void *args) {
     Grid_File_DB *file_db = t_args->file_db;
     int client_desc = t_args->client_desc;
     char buf[BUFSIZ];
-    sig_atomic_t client_on = 1;
+    sig_atomic_t client_on = TRUE;
 
     while (server_on && client_on) {
         recv_message(client_desc, buf);
@@ -143,7 +143,7 @@ void *client_handling(void *args) {
             if (client_authentication(buf + strlen(AUTH_CMD) + strlen(COMMAND_DELIMITER))) {
 
                 craft_ack_response_header(buf);
-                char *key = crypt(SECRET_SERVER, SALT_SECRET);
+                char *key = crypt(SECRET_CLIENT, SALT_SECRET);
                 strncat(buf, key, strlen(key));
                 strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
             } else {
@@ -193,7 +193,7 @@ void *client_handling(void *args) {
                 craft_ack_response(buf);
 
                 char command_args[BUFSIZ];
-                char *key = crypt(SERVER_SECRET, SALT_SECRET);
+                char *key = get_key(SECRET_SERVER);
                 strncat(command_args, key, strlen(key));
                 strncat(command_args, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
                 strncat(command_args, file_name, strlen(file_name));
@@ -247,7 +247,7 @@ void server_routine(DR_List *list, Grid_File_DB *file_db) {
 }
 
 
-int start_connection_with_dr(DR_Node *pNode, DR_List *list) {
+int start_connection_with_dr(DR_Node *pNode, DR_List *list, Grid_File_DB *file_database) {
     printf("Starting connection with node %u at %s : %u\n", pNode->id, pNode->ip, pNode->port);
     int ret;
     struct sockaddr_in repo_addr = {};
@@ -267,12 +267,14 @@ int start_connection_with_dr(DR_Node *pNode, DR_List *list) {
     }
 
     char buf[BUFSIZ];
-    craft_request(buf,DR_UPDATE_MAP_CMD);
+    craft_request_header(buf, DR_UPDATE_MAP_CMD);
+    char *key = get_key(SECRET_SERVER);
+    strncat(buf, key, strlen(key));
     send_message(sock_d, buf, strlen(buf));
     recv_message(sock_d, buf);
     if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
-        printf("He said yes");
-        // TODO get updated allocation map from each repository
+        update_file_db_from_string(file_database, buf + strlen(OK_RESPONSE));
+
     } else if (strncmp(buf, NOK_RESPONSE, strlen(NOK_RESPONSE)) == 0) {
         fprintf(stderr, "DR_Node %d refused the command \"%s\"", pNode->id, DR_UPDATE_MAP_CMD);
     } else {
@@ -291,7 +293,7 @@ int main(int argc, char const *argv[]) {
     DR_List *list = get_data_repositories_info();
     Grid_File_DB *file_db = init_db(FALSE, SERVER_ID);
     for (DR_Node *node = list->node; node; node = node->next)
-        start_connection_with_dr(node, list);
+        start_connection_with_dr(node, list, file_db);
 
     server_routine(list, file_db);
 

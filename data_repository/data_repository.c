@@ -30,7 +30,16 @@ void *dr_routine(void *args) {
         recv_message(client_desc, buf);
 
         if (strncmp(buf, DR_UPDATE_MAP_CMD, strlen(DR_UPDATE_MAP_CMD)) == 0) {
-            craft_ack_response(buf);
+            strtok(buf, COMMAND_DELIMITER);
+            char *server_key = strtok(NULL, COMMAND_DELIMITER);
+            if (check_key(server_key, SECRET_SERVER)) {
+                craft_ack_response_header(buf);
+                file_db_to_string(file_db, buf);
+                strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
+            } else {
+                craft_nack_response(buf);
+            }
+
             send_message(client_desc, buf, strlen(buf));
             break;
         } else if (strncmp(buf, REMOVE_CMD, strlen(REMOVE_CMD)) == 0) {
@@ -38,7 +47,7 @@ void *dr_routine(void *args) {
             char *key = strtok(NULL, COMMAND_DELIMITER);
             char *file_name = strtok(NULL, COMMAND_DELIMITER);
 
-            if (check_key(key, NULL) && remove_file(file_db, file_name))
+            if (check_key(key, SECRET_SERVER) && remove_file(file_db, file_name))
                 craft_ack_response(buf);
             else
                 craft_nack_response(buf);
@@ -107,7 +116,7 @@ void *dr_routine(void *args) {
                 craft_ack_response(buf);
                 send_message(client_desc, buf, strlen(buf));
 
-                FILE *new_block = recv_file(client_desc, block_name, strtol(block_size, NULL, 10));
+                recv_file(client_desc, block_name, strtol(block_size, NULL, 10));
                 transfer_block(file_db, block_name, file_db->id);
 
             } else {
@@ -181,7 +190,6 @@ void start_dr_routine(int port) {
         ERROR_HELPER(client_desc, "Error on accepting incoming connection", TRUE);
         if (client_desc < 0) continue;
         t_args = (thread_args *) malloc(sizeof(thread_args));
-        //t_args->list = list;
         t_args->client_desc = client_desc;
         ret = pthread_create(&thread, NULL, dr_routine, (void *) t_args);
         PTHREAD_ERROR_HELPER(ret, "Error on pthread creation", TRUE);
