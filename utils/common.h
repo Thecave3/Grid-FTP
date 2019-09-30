@@ -6,21 +6,25 @@
 #define GRID_FTP_UTILS_H
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <string.h>
-#include <stdlib.h>
 #include <arpa/inet.h>
-#include <sys/socket.h>
 #include <netinet/in.h>
+
+#include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <sys/stat.h>
+#include <sys/sendfile.h>
+
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/sendfile.h>
 #include <pthread.h>
-#include <openssl/md5.h>
+#include <crypt.h>
+#include <libgen.h>
 
 #include "dr_list.h"
 #include "colors.h"
@@ -31,8 +35,10 @@
 #define DEBUG TRUE
 
 #define PORT_DELIMITER 1024 // just to preserve reserved port
-#define HASH_LENGTH 32 // md5 hash length
-#define SECRET_KEY "secret"
+
+#define SECRET_DR "dr_secret"
+#define SECRET_SERVER "server_secret"
+#define SECRET_CLIENT "client_secret"
 #define SALT_SECRET "Az"
 
 #define FILE_BLOCK_SEPARATOR "_"
@@ -46,5 +52,7 @@
 void clear_screen();
 
 char **get_file_name(char *file_path);
+
+int check_key(char *key, char *secret);
 
 #endif // GRID_FTP_UTILS_H

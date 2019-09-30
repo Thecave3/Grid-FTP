@@ -121,6 +121,11 @@ void craft_header(char *buffer, char *command) {
     strncpy(buffer, command, strlen(command));
 }
 
+void craft_request(char *buffer, char *command) {
+    craft_header(buffer, command);
+    strncat(buffer, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
+}
+
 void craft_request_header(char *buffer, char *command) {
     craft_header(buffer, command);
     strncat(buffer, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));

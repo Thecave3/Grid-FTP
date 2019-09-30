@@ -4,8 +4,6 @@
 
 
 #include "common.h"
-#include <sys/stat.h>
-#include <libgen.h>
 
 
 void clear_screen() {
@@ -41,4 +39,11 @@ char **get_file_name(char *file_path) {
     result[1] = file_size;
 
     return result;
+}
+
+int check_key(char *key, char *secret) {
+    char *enc_key = crypt(key, SALT_SECRET);
+    char *enc_secret = crypt(secret, SALT_SECRET);
+
+    return strncmp(enc_key, enc_secret, strlen(enc_key)) == 0;
 }

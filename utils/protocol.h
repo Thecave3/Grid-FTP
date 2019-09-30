@@ -22,7 +22,7 @@
 #define OK_RESPONSE "ack"
 #define NOK_RESPONSE "nack"
 
-#define DR_UPDATE_MAP_CMD "update_map\n"
+#define DR_UPDATE_MAP_CMD "update_map"
 
 #define AUTH_CMD "auth"
 #define GET_DR_CMD "get_dr"
@@ -55,6 +55,8 @@ FILE *recv_file(int socket_desc, char *file_name, unsigned long file_size);
 void send_file(int socket_desc, char *file_path, unsigned long file_size);
 
 void craft_request_header(char *buffer, char *command);
+
+void craft_request(char *buffer, char *command);
 
 void craft_ack_response_header(char *buffer);
 

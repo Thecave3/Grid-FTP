@@ -2,10 +2,9 @@
 // Created by Andrea Lacava on 18/09/19.
 //
 
-#include <crypt.h>
 #include "server.h"
 
-sig_atomic_t server_on = 1;
+sig_atomic_t server_on = TRUE;
 
 typedef struct thread_args {
     int client_desc;
@@ -144,7 +143,7 @@ void *client_handling(void *args) {
             if (client_authentication(buf + strlen(AUTH_CMD) + strlen(COMMAND_DELIMITER))) {
 
                 craft_ack_response_header(buf);
-                char *key = crypt(SECRET_KEY, SALT_SECRET);
+                char *key = crypt(SECRET_SERVER, SALT_SECRET);
                 strncat(buf, key, strlen(key));
                 strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
             } else {
@@ -267,15 +266,13 @@ int start_connection_with_dr(DR_Node *pNode, DR_List *list) {
         return ret;
     }
 
-    // TODO Authentication phase
-    // TODO get updated allocation map from each repository
     char buf[BUFSIZ];
-    memset(buf, 0, BUFSIZ); // just clean the buffer and make sure no strange things are inside
-    strncpy(buf, DR_UPDATE_MAP_CMD, strlen(DR_UPDATE_MAP_CMD));
-    send_message(sock_d, buf, strlen(DR_UPDATE_MAP_CMD));
+    craft_request(buf,DR_UPDATE_MAP_CMD);
+    send_message(sock_d, buf, strlen(buf));
     recv_message(sock_d, buf);
     if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
         printf("He said yes");
+        // TODO get updated allocation map from each repository
     } else if (strncmp(buf, NOK_RESPONSE, strlen(NOK_RESPONSE)) == 0) {
         fprintf(stderr, "DR_Node %d refused the command \"%s\"", pNode->id, DR_UPDATE_MAP_CMD);
     } else {

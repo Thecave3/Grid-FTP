@@ -8,7 +8,6 @@ sig_atomic_t dr_on = TRUE;
 
 typedef struct thread_args {
     int client_desc;
-    //DR_List *list;
     Grid_File_DB *file_db;
 } thread_args;
 
@@ -17,9 +16,8 @@ void print_usage(const char *file_name) {
            file_name, PORT_DELIMITER);
 }
 
-int check_key(char *key) {
-    // TODO
-    return FALSE;
+char *get_dr_key() {
+    return crypt(SECRET_DR, SALT_SECRET);
 }
 
 void *dr_routine(void *args) {
@@ -40,7 +38,7 @@ void *dr_routine(void *args) {
             char *key = strtok(NULL, COMMAND_DELIMITER);
             char *file_name = strtok(NULL, COMMAND_DELIMITER);
 
-            if (check_key(key) && remove_file(file_db, file_name))
+            if (check_key(key, NULL) && remove_file(file_db, file_name))
                 craft_ack_response(buf);
             else
                 craft_nack_response(buf);
@@ -49,18 +47,19 @@ void *dr_routine(void *args) {
 
         } else if (strncmp(buf, TRANSFER_CMD, strlen(TRANSFER_CMD)) == 0) {
             strtok(buf, COMMAND_DELIMITER);
-            char *key = strtok(NULL, COMMAND_DELIMITER);
+            char *server_key = strtok(NULL, COMMAND_DELIMITER);
             char *block_name = strtok(NULL, COMMAND_DELIMITER);
             char *new_dr_id = strtok(NULL, COMMAND_DELIMITER);
             char *new_dr_ip = strtok(NULL, COMMAND_DELIMITER);
             char *new_dr_port = strtok(NULL, COMMAND_DELIMITER);
 
 
-            if (check_key(key) && transfer_block(file_db, block_name, strtol(new_dr_id, NULL, 10))) {
+            if (check_key(server_key, SECRET_SERVER) &&
+                transfer_block(file_db, block_name, strtol(new_dr_id, NULL, 10))) {
 
                 craft_request_header(buf, TRANSFER_FROM_DR_CMD);
-                char *key = get_dr_key();
-                strncat(buf, key, strlen(key));
+                char *dr_key = get_dr_key();
+                strncat(buf, dr_key, strlen(dr_key));
                 strncat(buf, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
                 strncat(buf, block_name, strlen(block_name));
                 strncat(buf, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
@@ -119,7 +118,7 @@ void *dr_routine(void *args) {
             strtok(buf, COMMAND_DELIMITER);
             char *key = strtok(NULL, COMMAND_DELIMITER);
             char *block_name = strtok(NULL, COMMAND_DELIMITER);
-            if (check_key(key)) {
+            if (check_key(key, NULL)) {
                 Block_File *block_file = get_block(file_db, block_name);
 
                 craft_ack_response(buf);
@@ -138,7 +137,7 @@ void *dr_routine(void *args) {
             unsigned long start = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
             unsigned long end = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
 
-            if (check_key(key)) {
+            if (check_key(key, NULL)) {
                 craft_ack_response(buf);
                 send_message(client_desc, buf, strlen(buf));
 
@@ -164,10 +163,6 @@ void *dr_routine(void *args) {
             perror("Command Unrecognized\n");
             fprintf(stderr, "%s", buf);
         }
-
-        //            craft_ack_response(buf);
-        //            FILE *fp = recv_file(client_desc, file_name, file_size);
-
     }
     pthread_exit(NULL);
 }
@@ -181,7 +176,7 @@ void start_dr_routine(int port) {
     pthread_t thread;
     thread_args *t_args;
 
-    while (1) {
+    while (dr_on) {
         client_desc = accept(dr_sock, NULL, NULL);
         ERROR_HELPER(client_desc, "Error on accepting incoming connection", TRUE);
         if (client_desc < 0) continue;

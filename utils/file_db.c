@@ -5,24 +5,30 @@
 #include "file_db.h"
 #include "common.h"
 #include "protocol.h"
+#include <semaphore.h>
 
+#define CRITICAL_SECTION_SIZE 1
+sem_t sem;
 
 Grid_File_DB *init_db(int is_dr, u_int8_t id) {
     Grid_File_DB *database = (Grid_File_DB *) malloc(sizeof(Grid_File_DB));
     database->is_dr = is_dr;
     database->id = id;
     database->head = NULL;
+    sem_init(&sem, 0, CRITICAL_SECTION_SIZE);
     return database;
 }
 
 void file_db_to_string(Grid_File_DB *database, char *buffer) {
     char *file_str;
+    sem_wait(&sem);
     for (Grid_File *file = database->head; file; file = file->next) {
         file_str = file_to_string(file);
         strncat(buffer, file_str, strlen(file_str));
         if (file->next)
             strncat(buffer, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
     }
+    sem_post(&sem);
 }
 
 static int file_compare(Grid_File *file, char *n) {
@@ -71,7 +77,10 @@ Grid_File *_get_file(Grid_File *file, char *name) {
 }
 
 Grid_File *get_file(Grid_File_DB *database, char *name) {
-    return _get_file(database->head, name);
+    sem_wait(&sem);
+    Grid_File *result = _get_file(database->head, name);
+    sem_post(&sem);
+    return result;
 }
 
 Grid_File *new_file(char *name, unsigned long size, Block_File *head_block) {
@@ -84,6 +93,7 @@ Grid_File *new_file(char *name, unsigned long size, Block_File *head_block) {
 }
 
 int add_file(Grid_File_DB *database, char *name, long unsigned size, Block_File *head) {
+    sem_wait(&sem);
     if (find_file(database, name))
         return FALSE;
     if (!database->head) {
@@ -93,10 +103,12 @@ int add_file(Grid_File_DB *database, char *name, long unsigned size, Block_File 
         Grid_File *tail_list = get_tail(database);
         tail_list->next = new_file(name, size, head);
     }
+    sem_post(&sem);
     return TRUE;
 }
 
 int _remove_file(Grid_File *file, char *name, int is_dr, u_int8_t dr_id) {
+
     if (!file)
         return TRUE;
 
@@ -121,12 +133,16 @@ int _remove_file(Grid_File *file, char *name, int is_dr, u_int8_t dr_id) {
 }
 
 int remove_file(Grid_File_DB *database, char *name) {
-    return _remove_file(database->head, name, database->is_dr, database->id);
+
+    sem_wait(&sem);
+    int result = _remove_file(database->head, name, database->is_dr, database->id);
+    sem_post(&sem);
+    return result;
 }
 
 // duplicate the string
 // split the string at the separator in order to extract the file_name
-// Output string is dinamically allocated. Remember to FREE.
+// Output string is dynamically allocated. Remember to FREE.
 char *get_file_name_from_block_name(char *block_name) {
 
     char *b_str = strndup(block_name, strlen(block_name));
@@ -181,11 +197,18 @@ Block_File *new_block(char *block_name, u_int8_t dr_id, unsigned long start, uns
     return result;
 }
 
-Block_File *append_block(Block_File *head, Block_File *block_new) {
+Block_File *_append_block(Block_File *head, Block_File *block_new) {
     if (!head)
         return block_new;
     head->next = append_block(head->next, block_new);
     return head;
+}
+
+Block_File *append_block(Block_File *head, Block_File *block_new) {
+    sem_wait(&sem);
+    Block_File *result = _append_block(head, block_new);
+    sem_post(&sem);
+    return result;
 }
 
 Block_File *_get_block(Grid_File *file, char *block_name) {
@@ -206,16 +229,6 @@ Block_File *_get_block(Grid_File *file, char *block_name) {
 
 Block_File *get_block(Grid_File_DB *file_db, char *block_name) {
     return _get_block(file_db->head, block_name);
-}
-
-
-int move_block(Grid_File_DB *file_db, char *block_name, u_int8_t new_dr_id) {
-    Block_File *block = get_block(file_db, block_name);
-    if (!block)
-        return FALSE;
-    block->dr_id = new_dr_id;
-
-    return TRUE;
 }
 
 
@@ -243,13 +256,25 @@ int _remove_block(Grid_File *file, char *block_name, u_int8_t caller_id) {
 }
 
 int remove_block(Grid_File_DB *file_db, char *block_name) {
-    return _remove_block(get_file(file_db, get_file_name_from_block_name(block_name)), block_name, file_db->id);
+    sem_wait(&sem);
+    int result = _remove_block(get_file(file_db, get_file_name_from_block_name(block_name)), block_name, file_db->id);
+    sem_post(&sem);
+    return result;
 }
 
 int transfer_block(Grid_File_DB *file_db, char *block_name, u_int8_t new_dr_id) {
+    sem_wait(&sem);
     Block_File *block = get_block(file_db, block_name);
     if (!block)
         return FALSE;
     block->dr_id = new_dr_id;
+    sem_post(&sem);
     return TRUE;
+}
+
+void db_destroyer(Grid_File_DB *file_db) {
+    sem_wait(&sem);
+
+    sem_post(&sem);
+    sem_destroy(&sem);
 }

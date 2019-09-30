@@ -1,6 +1,6 @@
 #include "client.h"
 
-sig_atomic_t keep_alive = 1;
+sig_atomic_t keep_alive = TRUE;
 
 
 void commands_available() {
