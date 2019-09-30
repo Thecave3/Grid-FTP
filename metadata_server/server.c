@@ -294,6 +294,8 @@ int start_connection_with_dr(DR_Node *pNode, DR_List *list, Grid_File_DB *file_d
     if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
         printf("Updating database...\n");
         update_file_db_from_string(file_database, buf);
+        file_db_to_string(file_database, buf);
+        printf("%s", buf);
     } else if (strncmp(buf, NOK_RESPONSE, strlen(NOK_RESPONSE)) == 0) {
         fprintf(stderr, "DR_Node %d refused the command \"%s\"", pNode->id, DR_UPDATE_MAP_CMD);
     } else {

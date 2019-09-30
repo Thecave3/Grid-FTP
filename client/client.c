@@ -215,8 +215,7 @@ void client_routine(int client_desc, char *key, DR_List *list) {
 
             recv_message(client_desc, buf);
             if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
-                // Parse and print list
-                printf("%s", buf + strlen(OK_RESPONSE));
+                printf("%s", buf + strlen(OK_RESPONSE)+strlen(COMMAND_DELIMITER));
             } else {
                 printf("%sProblem in communication!%s", KRED, KNRM);
             }
@@ -314,7 +313,7 @@ void client_routine(int client_desc, char *key, DR_List *list) {
             recv_message(client_desc, buf);
             if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
                 printf("File info retrieved!\n");
-                // Parse list and get from DR
+                // TODO Parse list and get from DR
                 printf("%s", buf);
             } else {
                 printf("File not found!\n");

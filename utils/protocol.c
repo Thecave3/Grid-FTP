@@ -8,15 +8,12 @@
 #include "protocol.h"
 
 int server_init(int server_port) {
-    int sock_desc, ret;
+    int sock_desc, ret, tr = 1;
     struct sockaddr_in *serv_addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
     sock_desc = socket(AF_INET, SOCK_STREAM, 0);
     ERROR_HELPER(sock_desc, "Error on socket creation", TRUE);
-//    int set = 1;
-//    setsockopt(sock_desc, SOL_SOCKET, MSG_NOSIGNAL, (void *) &set, sizeof(int));
-    int tr = 1;
 
-// kill "Address already in use" error message
+    // kill "Address already in use" error message
     if (setsockopt(sock_desc, SOL_SOCKET, SO_REUSEADDR, &tr, sizeof(int)) == -1) {
         perror("setsockopt");
         exit(1);
