@@ -29,7 +29,7 @@ void close_server() {
  * @param file_name path of the program
  */
 void print_usage(const char *file_name) {
-    printf("Usage: \"%s DR_PORT DR_ID\"\nwith:\n- DR_PORT: port in which the data repository has to be set up (>%d).\n- DR_ID: id of data repository (>8).\n",
+    printf("Usage: \"%s DR_PORT DR_ID\"\nwith:\n- DR_PORT: port in which the data repository has to be set up (>%d).\n- DR_ID: id of data repository (<8).\n",
            file_name, PORT_DELIMITER);
 }
 
@@ -74,6 +74,7 @@ void *dr_routine(void *args) {
             send_message(client_desc, buf, strlen(buf));
 
         } else if (strncmp(buf, TRANSFER_CMD, strlen(TRANSFER_CMD)) == 0) {
+            // TODO delete the file from the repo and delete the entry from the config file
             strtok(buf, COMMAND_DELIMITER);
             char *server_key = strtok(NULL, COMMAND_DELIMITER);
             char *block_name = strtok(NULL, COMMAND_DELIMITER);
@@ -127,6 +128,7 @@ void *dr_routine(void *args) {
             send_message(client_desc, buf, strlen(buf));
 
         } else if (strncmp(buf, TRANSFER_FROM_DR_CMD, strlen(TRANSFER_FROM_DR_CMD)) == 0) {
+            // TODO delete the file from the repo and delete the entry from the config file
             strtok(buf, COMMAND_DELIMITER);
             char *key = strtok(NULL, COMMAND_DELIMITER);
             char *block_name = strtok(NULL, COMMAND_DELIMITER);
@@ -159,6 +161,7 @@ void *dr_routine(void *args) {
                 send_message(client_desc, buf, strlen(buf));
             }
         } else if (strncmp(buf, PUT_CMD, strlen(PUT_CMD)) == 0) {
+            // TODO save file's entry inside the config file
             strtok(buf, COMMAND_DELIMITER);
             char *key = strtok(NULL, COMMAND_DELIMITER);
             char *block_name = strtok(NULL, COMMAND_DELIMITER);
@@ -206,23 +209,17 @@ void *dr_routine(void *args) {
 }
 
 /**
- * checks the internal db of the repository and launches the client handlers
+ * Checks the current state of the database and eventually populates it wit missing fields
+ *
+ * @param database
  */
-void start_dr_routine(int port, u_int8_t id) {
-    // open a socket and wait for auth from server
-    int dr_sock = server_init(port);
-    int client_desc, ret;
-
-    pthread_t thread;
-    thread_args *t_args;
-
-    Grid_File_DB *database = init_db(TRUE, id);
-
+void check_database_and_update(Grid_File_DB *database) {
+    // TODO open a file of config and read the entries, find the entries in folder and get start and end block sizes from there
     printf("Start updating database\n");
 
     struct stat st = {0};
     localpath = (char *) malloc(sizeof(char) * FILENAME_MAX);
-    snprintf(localpath, sizeof(localpath), "./%d", id);
+    snprintf(localpath, sizeof(localpath), "./%d", database->id);
 
     if (stat(localpath, &st) == -1) {
         // database does not exist, let's create one and move on
@@ -248,22 +245,36 @@ void start_dr_routine(int port, u_int8_t id) {
 
                     char *filename = get_file_name_from_block_name(block_path);
                     Grid_File *existing = get_file(database, filename);
-                    Block_File *block = new_block(block_path, id, 0, 0);
-                    /*
-                     * TODO start end destroys part of the logic, a better implementation with MORE TIME would have allowed to use a file configuration for database and a redundant live update in order to improve consistency.
-                    */
+                    Block_File *block = new_block(block_path, database->id, 0, 0);
+
                     if (!existing) {
                         add_file(database, filename, length, block);
                     } else {
                         append_block(existing->head, block);
                     }
                     fclose(fp);
-
                 }
             }
             closedir(d);
         }
     }
+}
+
+
+/**
+ * checks the internal db of the repository and launches the client handlers
+ */
+void start_dr_routine(int port, u_int8_t id) {
+    // open a socket and wait for auth from server
+    int dr_sock = server_init(port);
+    int client_desc, ret;
+
+    pthread_t thread;
+    thread_args *t_args;
+
+    Grid_File_DB *database = init_db(TRUE, id);
+
+    check_database_and_update(database);
 
     printf("Updating complete, starting dr routine...\n");
 
@@ -281,7 +292,13 @@ void start_dr_routine(int port, u_int8_t id) {
         PTHREAD_ERROR_HELPER(ret, "Error on thread detaching", TRUE);
     }
 }
-
+/**
+ * Usage: "./program_name DR_PORT DR_ID"
+ * with:
+ * @param DR_PORT: port in which the data repository has to be set up (>%d).
+ * @param DR_ID: id of data repository (<8).
+ *
+ */
 int main(int argc, char const *argv[]) {
     if (argc == 3) {
         int dr_port = (int) strtol(argv[1], NULL, 10);
@@ -300,7 +317,6 @@ int main(int argc, char const *argv[]) {
             sigint_action.sa_flags = 0;
             int ret = sigaction(SIGINT, &sigint_action, NULL);
             ERROR_HELPER(ret, "Error on arming SIGINT: ", TRUE);
-
 
             signal(SIGPIPE, SIG_IGN);
 
