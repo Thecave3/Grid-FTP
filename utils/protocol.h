@@ -54,14 +54,14 @@ FILE *recv_file(int socket_desc, char *file_name, unsigned long file_size);
 
 void send_file(int socket_desc, char *file_path, unsigned long file_size);
 
-void craft_request_header(char *buffer, char *command);
+void craft_request_header(char *buffer, char *command, size_t buffer_size);
 
-void craft_request(char *buffer, char *command);
+void craft_request(char *buffer, char *command, size_t buffer_size);
 
-void craft_ack_response_header(char *buffer);
+void craft_ack_response_header(char *buffer, size_t buffer_size);
 
-void craft_ack_response(char *buffer);
+void craft_ack_response(char *buffer, size_t buffer_size);
 
-void craft_nack_response(char *buffer);
+void craft_nack_response(char *buffer, size_t buffer_size);
 
 #endif //GRID_FTP_PROTOCOL_H

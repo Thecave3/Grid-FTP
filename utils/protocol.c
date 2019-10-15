@@ -163,9 +163,10 @@ void send_file(int socket_desc, char *file_path, unsigned long file_size) {
  *
  * @param buffer in which the data has to be put in
  * @param command to be put in
+ * @param buffer_size size of the buffer allocated
  */
-void craft_header(char *buffer, char *command) {
-    memset(buffer, 0, strlen(buffer));
+void craft_header(char *buffer, char *command, size_t buffer_size) {
+    memset(buffer, 0, buffer_size);
     strncpy(buffer, command, strlen(command));
 }
 
@@ -174,9 +175,10 @@ void craft_header(char *buffer, char *command) {
  *
  * @param buffer in which the data has to be put in
  * @param command to be put in
+ * @param buffer_size size of the buffer
  */
-void craft_request(char *buffer, char *command) {
-    craft_header(buffer, command);
+void craft_request(char *buffer, char *command, size_t buffer_size) {
+    craft_header(buffer, command, buffer_size);
     strncat(buffer, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
 }
 
@@ -185,9 +187,10 @@ void craft_request(char *buffer, char *command) {
  *
  * @param buffer in which the data has to be put in
  * @param command to be put in
+ * @param buffer_size size of the buffer
  */
-void craft_request_header(char *buffer, char *command) {
-    craft_header(buffer, command);
+void craft_request_header(char *buffer, char *command, size_t buffer_size) {
+    craft_header(buffer, command, buffer_size);
     strncat(buffer, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
 }
 
@@ -195,18 +198,20 @@ void craft_request_header(char *buffer, char *command) {
  * Create a basic header for positive response.
  *
  * @param buffer in which the data has to be put in
+ * @param buffer_size size of the buffer
  */
-void craft_ack_stub(char *buffer) {
-    craft_header(buffer, OK_RESPONSE);
+void craft_ack_stub(char *buffer, size_t buffer_size) {
+    craft_header(buffer, OK_RESPONSE, buffer_size);
 }
 
 /**
  * Create a basic header for positive response that has to be completed by user.
  *
  * @param buffer in which the data has to be put in
+ * @param buffer_size size of the buffer
  */
-void craft_ack_response_header(char *buffer) {
-    craft_ack_stub(buffer);
+void craft_ack_response_header(char *buffer, size_t buffer_size) {
+    craft_ack_stub(buffer, buffer_size);
     strncat(buffer, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
 }
 
@@ -214,9 +219,10 @@ void craft_ack_response_header(char *buffer) {
  * Create a complete positive response ready to be sent.
  *
  * @param buffer in which the data has to be put in
+ * @param buffer_size size of the buffer
  */
-void craft_ack_response(char *buffer) {
-    craft_ack_stub(buffer);
+void craft_ack_response(char *buffer, size_t buffer_size) {
+    craft_ack_stub(buffer, buffer_size);
     strncat(buffer, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
 }
 
@@ -224,8 +230,9 @@ void craft_ack_response(char *buffer) {
  * Create a complete negative response ready to be sent.
  *
  * @param buffer in which the data has to be put in
+ * @param buffer_size size of the buffer
  */
-void craft_nack_response(char *buffer) {
-    craft_header(buffer, NOK_RESPONSE);
+void craft_nack_response(char *buffer, size_t buffer_size) {
+    craft_header(buffer, NOK_RESPONSE, buffer_size);
     strncat(buffer, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
 }

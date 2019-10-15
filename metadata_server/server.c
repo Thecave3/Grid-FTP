@@ -44,9 +44,9 @@ void send_command_to_dr(DR_Node *node, char *command, char *cmd_args) {
         fprintf(stderr, "DR_Node %d is offline probably.", node->id);
         return;
     }
-
-    char buf[BUFSIZ];
-    craft_request_header(buf, command);
+    size_t buffer_size = BUFSIZ;
+    char buf[buffer_size];
+    craft_request_header(buf, command, buffer_size);
     strncat(buf, cmd_args, strlen(cmd_args));
     strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
 
@@ -169,14 +169,15 @@ void *client_handling(void *args) {
     DR_List *list = t_args->list;
     Grid_File_DB *file_db = t_args->file_db;
     int client_desc = t_args->client_desc;
-    char buf[BUFSIZ];
+    size_t buffer_size = BUFSIZ;
+    char buf[buffer_size];
     sig_atomic_t client_on = TRUE;
 
     while (server_on && client_on) {
         recv_message(client_desc, buf);
         if (strncmp(buf, LS_CMD, strlen(LS_CMD)) == 0) {
 
-            craft_ack_response_header(buf);
+            craft_ack_response_header(buf, buffer_size);
             file_db_to_string(file_db, buf);
             strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
 
@@ -186,12 +187,12 @@ void *client_handling(void *args) {
 
             if (client_authentication(buf + strlen(AUTH_CMD) + strlen(COMMAND_DELIMITER))) {
 
-                craft_ack_response_header(buf);
+                craft_ack_response_header(buf, buffer_size);
                 char *key = crypt(SECRET_CLIENT, SALT_SECRET);
                 strncat(buf, key, strlen(key));
                 strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
             } else {
-                craft_nack_response(buf);
+                craft_nack_response(buf, buffer_size);
             }
 
             send_message(client_desc, buf, strlen(buf));
@@ -199,7 +200,7 @@ void *client_handling(void *args) {
         } else if (strncmp(buf, GET_DR_CMD, strlen(GET_DR_CMD)) == 0) {
 
             char *dr_list_string = list_to_string(list);
-            craft_ack_response_header(buf);
+            craft_ack_response_header(buf, buffer_size);
             strncat(buf, dr_list_string, strlen(dr_list_string));
             strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
 
@@ -211,7 +212,7 @@ void *client_handling(void *args) {
             char *file_name = strtok(NULL, COMMAND_DELIMITER);
             long unsigned file_size = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
             char *division_list = data_block_division(file_db, list, file_name, file_size);
-            craft_ack_response_header(buf);
+            craft_ack_response_header(buf, buffer_size);
             strncat(buf, division_list, strlen(division_list));
             strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
 
@@ -225,11 +226,11 @@ void *client_handling(void *args) {
             Grid_File *file = get_file(file_db, file_name);
             if (file == NULL) {
                 printf("\"%s\" requested from client, but it was null", file_name);
-                craft_nack_response(buf);
+                craft_nack_response(buf, buffer_size);
                 send_message(client_desc, buf, strlen(buf));
                 continue;
             }
-            craft_ack_response_header(buf);
+            craft_ack_response_header(buf, buffer_size);
             for (Block_File *block = file->head; block; block = block->next) {
                 block_to_string(buf, block);
                 if (block->next)
@@ -244,7 +245,7 @@ void *client_handling(void *args) {
             char *file_name = strtok(NULL, COMMAND_DELIMITER);
 
             if (remove_file(file_db, file_name)) {
-                craft_ack_response(buf);
+                craft_ack_response(buf, buffer_size);
 
                 char command_args[BUFSIZ];
                 char *key = get_key(SECRET_SERVER);
@@ -255,14 +256,14 @@ void *client_handling(void *args) {
                 for (DR_Node *node = list->node; node; node = node->next)
                     send_command_to_dr(node, REMOVE_CMD, command_args);
             } else
-                craft_nack_response(buf);
+                craft_nack_response(buf, buffer_size);
 
             send_message(client_desc, buf, strlen(buf));
 
         } else if (strncmp(buf, QUIT_CMD, strlen(QUIT_CMD)) == 0) {
             client_on = FALSE;
         } else { // Unrecognized command
-            craft_nack_response(buf);
+            craft_nack_response(buf, buffer_size);
             send_message(client_desc, buf, strlen(buf));
         }
     }
@@ -329,8 +330,9 @@ int start_connection_with_dr(DR_Node *pNode, DR_List *list, Grid_File_DB *file_d
         return ret;
     }
     printf("I am connected to %hhu\n", pNode->id);
-    char buf[BUFSIZ];
-    craft_request_header(buf, DR_UPDATE_MAP_CMD);
+    size_t buffer_size = BUFSIZ;
+    char buf[buffer_size];
+    craft_request_header(buf, DR_UPDATE_MAP_CMD, buffer_size);
     char *key = get_key(SECRET_SERVER);
     strncat(buf, key, strlen(key));
     strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));

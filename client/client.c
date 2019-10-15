@@ -42,8 +42,9 @@ void close_client() {
  * @param client_desc endpoint to alert
  */
 void quit_command(int client_desc) {
-    char buf[BUFSIZ];
-    craft_request(buf, QUIT_CMD);
+    size_t buffer_size = BUFSIZ;
+    char buf[buffer_size];
+    craft_request(buf, QUIT_CMD, buffer_size);
     send_message(client_desc, buf, strlen(buf));
     close(client_desc);
     close_client();
@@ -81,7 +82,8 @@ int client_init(char *address, u_int16_t port) {
 char *authentication(int client_desc) {
     char username[MAX_LEN_UNAME];
     char password[MAX_LEN_PWD];
-    char buf[BUFSIZ];
+    size_t buffer_size = BUFSIZ;
+    char buf[buffer_size];
     int ret;
 
     printf("Username: ");
@@ -94,7 +96,7 @@ char *authentication(int client_desc) {
     ERROR_HELPER(ret, "Error on input read", TRUE);
     password[strlen(password) - 1] = 0;
 
-    craft_request_header(buf, AUTH_CMD);
+    craft_request_header(buf, AUTH_CMD, buffer_size);
     strncat(buf, username, strlen(username));
     strncat(buf, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
     strncat(buf, password, strlen(password));
@@ -163,10 +165,12 @@ void *send_file_to_dr(void *args) {
     unsigned long start = t_args->start;
     unsigned long end = t_args->end;
 
-    char buf[BUFSIZ];
-    char block_name[BUFSIZ];
-    char start_str[BUFSIZ];
-    char end_str[BUFSIZ];
+    size_t buffer_size = BUFSIZ;
+
+    char buf[buffer_size];
+    char block_name[buffer_size];
+    char start_str[buffer_size];
+    char end_str[buffer_size];
 
     memset(block_name, 0, strlen(block_name));
     memset(start_str, 0, strlen(start_str));
@@ -183,7 +187,7 @@ void *send_file_to_dr(void *args) {
     DR_Node *node = get_node(list, id_dr);
     int dr_sock = client_init(node->ip, node->port);
 
-    craft_request_header(buf, PUT_CMD);
+    craft_request_header(buf, PUT_CMD, buffer_size);
     strncat(buf, key, strlen(key));
     strncat(buf, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
     strncat(buf, block_name, strlen(block_name));
@@ -242,8 +246,9 @@ void ls_command() {
  * @param end offset
  */
 void get_file_from_dr(DR_List *list, char *key, char *filename, char *dr_id, char *start, char *end) {
-    char buf[BUFSIZ];
-    craft_request_header(buf, GET_CMD);
+    size_t buffer_size = BUFSIZ;
+    char buf[buffer_size];
+    craft_request_header(buf, GET_CMD, buffer_size);
     strncat(buf, key, strlen(key));
     strncat(buf, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
     strncat(buf, filename, strlen(filename));
@@ -273,12 +278,13 @@ void get_file_from_dr(DR_List *list, char *key, char *filename, char *dr_id, cha
  * @param list of known dr in the network
  */
 void client_routine(int client_desc, char *key, DR_List *list) {
-    char buf[BUFSIZ];
+    size_t buffer_size = BUFSIZ;
+    char buf[buffer_size];
     int ret;
 
     while (keep_alive) {
         printf("%sType a command: %s", KBLU, KNRM);
-        ret = fgets(buf, sizeof(buf), stdin) != (char *) buf;
+        ret = fgets(buf, buffer_size, stdin) != (char *) buf;
         ERROR_HELPER(ret, "Error on input read", TRUE);
 
         if (strncmp(buf, CLEAR, strlen(CLEAR)) == 0) {
@@ -286,7 +292,7 @@ void client_routine(int client_desc, char *key, DR_List *list) {
         } else if (strncmp(buf, HELP, strlen(HELP)) == 0) {
             commands_available();
         } else if (strncmp(buf, LS, strlen(LS)) == 0) {
-            craft_request(buf, LS_CMD);
+            craft_request(buf, LS_CMD, buffer_size);
             send_message(client_desc, buf, strlen(buf));
 
             recv_message(client_desc, buf);
@@ -311,7 +317,7 @@ void client_routine(int client_desc, char *key, DR_List *list) {
             char *file_name = file_info[0];
             char *file_size = file_info[1];
 
-            craft_request_header(buf, PUT_CMD);
+            craft_request_header(buf, PUT_CMD, buffer_size);
             strncat(buf, file_name, strlen(file_name));
             strncat(buf, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
             strncat(buf, file_size, strlen(file_size));
@@ -381,7 +387,7 @@ void client_routine(int client_desc, char *key, DR_List *list) {
             ret = fgets(filename, sizeof(filename), stdin) != (char *) filename;
             ERROR_HELPER(ret, "Error on input read", TRUE);
 
-            craft_request_header(buf, GET_CMD);
+            craft_request_header(buf, GET_CMD, buffer_size);
             strncat(buf, filename, strlen(filename));
             strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
 
@@ -414,7 +420,7 @@ void client_routine(int client_desc, char *key, DR_List *list) {
             ret = fgets(filename, sizeof(filename), stdin) != (char *) filename;
             ERROR_HELPER(ret, "Error on input read", TRUE);
 
-            craft_request_header(buf, REMOVE_CMD);
+            craft_request_header(buf, REMOVE_CMD, buffer_size);
             strncat(buf, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
             strncat(buf, filename, strlen(filename));
             strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
@@ -447,9 +453,10 @@ void client_routine(int client_desc, char *key, DR_List *list) {
  * @return DR_List* representing all data repositories active in the grid
  */
 DR_List *get_data_repositories(int client_desc) {
-    char buf[BUFSIZ];
+    size_t buffer_size = BUFSIZ;
+    char buf[buffer_size];
 
-    craft_request(buf, GET_DR_CMD);
+    craft_request(buf, GET_DR_CMD, buffer_size);
 
     send_message(client_desc, buf, strlen(buf));
 

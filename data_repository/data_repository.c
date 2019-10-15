@@ -43,7 +43,8 @@ void *dr_routine(void *args) {
     thread_args *t_args = (thread_args *) args;
     int client_desc = t_args->client_desc;
     Grid_File_DB *file_db = t_args->file_db;
-    char buf[BUFSIZ];
+    size_t buffer_size = BUFSIZ;
+    char buf[buffer_size];
     sig_atomic_t client_on = TRUE;
     while (dr_on && client_on) {
         recv_message(client_desc, buf);
@@ -52,11 +53,11 @@ void *dr_routine(void *args) {
             strtok(buf, COMMAND_DELIMITER);
             char *server_key = strtok(NULL, COMMAND_DELIMITER);
             if (check_key(server_key, SECRET_SERVER)) {
-                craft_ack_response_header(buf);
+                craft_ack_response_header(buf, buffer_size);
                 file_db_to_string(file_db, buf);
                 strncat(buf, COMMAND_TERMINATOR, strlen(COMMAND_TERMINATOR));
             } else {
-                craft_nack_response(buf);
+                craft_nack_response(buf, buffer_size);
             }
 
             send_message(client_desc, buf, strlen(buf));
@@ -67,9 +68,9 @@ void *dr_routine(void *args) {
             char *file_name = strtok(NULL, COMMAND_DELIMITER);
 
             if (check_key(key, SECRET_SERVER) && remove_file(file_db, file_name))
-                craft_ack_response(buf);
+                craft_ack_response(buf, buffer_size);
             else
-                craft_nack_response(buf);
+                craft_nack_response(buf, buffer_size);
 
             send_message(client_desc, buf, strlen(buf));
 
@@ -86,7 +87,7 @@ void *dr_routine(void *args) {
             if (check_key(server_key, SECRET_SERVER) &&
                 transfer_block(file_db, block_name, strtol(new_dr_id, NULL, 10))) {
 
-                craft_request_header(buf, TRANSFER_FROM_DR_CMD);
+                craft_request_header(buf, TRANSFER_FROM_DR_CMD, buffer_size);
                 char *dr_key = get_key(SECRET_DR);
                 strncat(buf, dr_key, strlen(dr_key));
                 strncat(buf, COMMAND_DELIMITER, strlen(COMMAND_DELIMITER));
@@ -115,15 +116,15 @@ void *dr_routine(void *args) {
                 if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
                     send_file(sock_d, block->block_name, block_size);
 
-                    craft_ack_response(buf);
+                    craft_ack_response(buf, buffer_size);
 
                 } else {
-                    craft_nack_response(buf);
+                    craft_nack_response(buf, buffer_size);
                 }
                 close(sock_d);
 
             } else {
-                craft_nack_response(buf);
+                craft_nack_response(buf, buffer_size);
             }
             send_message(client_desc, buf, strlen(buf));
 
@@ -134,14 +135,14 @@ void *dr_routine(void *args) {
             char *block_name = strtok(NULL, COMMAND_DELIMITER);
             char *block_size = strtok(NULL, COMMAND_DELIMITER);
             if (check_key(key, SECRET_DR)) {
-                craft_ack_response(buf);
+                craft_ack_response(buf, buffer_size);
                 send_message(client_desc, buf, strlen(buf));
 
                 recv_file(client_desc, block_name, strtol(block_size, NULL, 10));
                 transfer_block(file_db, block_name, file_db->id);
 
             } else {
-                craft_nack_response(buf);
+                craft_nack_response(buf, buffer_size);
                 send_message(client_desc, buf, strlen(buf));
             }
         } else if (strncmp(buf, GET_CMD, strlen(GET_CMD)) == 0) {
@@ -151,13 +152,13 @@ void *dr_routine(void *args) {
             if (check_key(key, SECRET_CLIENT)) {
                 Block_File *block_file = get_block(file_db, block_name);
 
-                craft_ack_response(buf);
+                craft_ack_response(buf, buffer_size);
                 send_message(client_desc, buf, strlen(buf));
 
                 send_file(client_desc, block_file->block_name, block_file->end - block_file->start);
 
             } else {
-                craft_nack_response(buf);
+                craft_nack_response(buf, buffer_size);
                 send_message(client_desc, buf, strlen(buf));
             }
         } else if (strncmp(buf, PUT_CMD, strlen(PUT_CMD)) == 0) {
@@ -169,7 +170,7 @@ void *dr_routine(void *args) {
             unsigned long end = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
 
             if (check_key(key, SECRET_CLIENT)) {
-                craft_ack_response(buf);
+                craft_ack_response(buf, buffer_size);
                 send_message(client_desc, buf, strlen(buf));
                 char *f_path = localpath;
                 strncat(f_path, "/", strlen("/"));
@@ -190,7 +191,7 @@ void *dr_routine(void *args) {
                 }
                 break;
             } else {
-                craft_nack_response(buf);
+                craft_nack_response(buf, buffer_size);
                 send_message(client_desc, buf, strlen(buf));
             }
 
@@ -201,7 +202,7 @@ void *dr_routine(void *args) {
             printf("Command Unrecognized\n");
             fprintf(stderr, "%s", buf);
 
-            craft_nack_response(buf);
+            craft_nack_response(buf, buffer_size);
             send_message(client_desc, buf, strlen(buf));
         }
     }
@@ -292,6 +293,7 @@ void start_dr_routine(int port, u_int8_t id) {
         PTHREAD_ERROR_HELPER(ret, "Error on thread detaching", TRUE);
     }
 }
+
 /**
  * Usage: "./program_name DR_PORT DR_ID"
  * with:
