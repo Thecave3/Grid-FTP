@@ -28,7 +28,7 @@ Grid_File_DB *init_db(int is_dr, u_int8_t id) {
 
 /**
  * ToString function of the entire database, based on single function.
- * Values are concateneted to the buffer by using strncat();.
+ * Values are concatenated to the buffer by using strncat();.
  *
  * @param database to be stringed
  * @param buffer in which the database will be stored.

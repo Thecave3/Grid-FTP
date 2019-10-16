@@ -7,4 +7,7 @@
 
 #include "../utils/common.h"
 
+
+#define DB_FILE_DELIMITER ","
+
 #endif //GRID_FTP_DATA_REPOSITORY_H
