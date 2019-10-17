@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.7)
 project(Grid_FTP C)
 
 set(CMAKE_C_STANDARD 11)
@@ -10,6 +10,11 @@ include_directories(client)
 include_directories(data_repository)
 include_directories(metadata_server)
 include_directories(utils)
+include_directories(bin)
+
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ./lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ./lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ./bin)
 
 add_executable(Grid_FTP_Server
         metadata_server/server.c

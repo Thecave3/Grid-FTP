@@ -264,17 +264,17 @@ void *dr_routine(void *args) {
             }
         } else if (strncmp(buf, PUT_CMD, strlen(PUT_CMD)) == 0) {
             strtok(buf, COMMAND_DELIMITER);
-            char *key = strtok(NULL, COMMAND_DELIMITER);
-            char *block_name = strtok(NULL, COMMAND_DELIMITER);
+            char *key = strdup(strtok(NULL, COMMAND_DELIMITER));
+            char *block_name = strdup(strtok(NULL, COMMAND_DELIMITER));
             unsigned long start = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
             unsigned long end = strtol(strtok(NULL, COMMAND_DELIMITER), NULL, 10);
 
             if (check_key(key, SECRET_CLIENT)) {
                 craft_ack_response(buf, buffer_size);
                 send_message(client_desc, buf, strlen(buf));
-                char *f_path = localpath;
+                char *f_path = strdup(localpath);
                 strncat(f_path, "/", strlen("/"));
-                strncat(f_path, block_name, strlen(block_name));
+                strcat(f_path, block_name);
 
                 Block_File *block = new_block(f_path, database->id, start, end);
                 recv_file(client_desc, f_path, end - start);
@@ -335,7 +335,8 @@ void check_database_and_update(Grid_File_DB *database) {
         DIR *d;
         struct dirent *dir;
         d = opendir(localpath);
-        strcat(localpath, ".db");
+        char *db_filename = strdup(localpath);
+        strcat(db_filename, ".db");
         if (d) {
             while ((dir = readdir(d)) != NULL) {
                 if (dir->d_name[0] != '.') { // ignore the hidden file and the back
@@ -344,6 +345,12 @@ void check_database_and_update(Grid_File_DB *database) {
                     strcat(block_path, dir->d_name);
 
                     FILE *fp = fopen(block_path, "rb");
+                    if (!fp) {
+                        printf("%sA file present in the database file is not present into the directory, ignoring..%s\n",
+                               KRED,
+                               KNRM);
+                        continue;
+                    }
                     fseek(fp, 0, SEEK_END);
                     long unsigned length = ftell(fp);
                     printf("%s, size: %lu\n", block_path, length);

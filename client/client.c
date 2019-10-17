@@ -297,6 +297,7 @@ void client_routine(int client_desc, char *key, DR_List *list) {
 
             recv_message(client_desc, buf);
             if (strncmp(buf, OK_RESPONSE, strlen(OK_RESPONSE)) == 0) {
+                printf("File list:\n");
                 printf("%s", buf + strlen(OK_RESPONSE) + strlen(COMMAND_DELIMITER));
             } else {
                 printf("%sProblem in communication!%s", KRED, KNRM);

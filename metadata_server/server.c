@@ -88,7 +88,7 @@ DR_List *get_data_repositories_info() {
  *
  * @param buf with user request
  *
- * @return TRUE if user found and password is correct, FALSE elsewhere
+ * @return TRUE if user found and password is correct, FALSE otherwise-
  */
 int client_authentication(char *buf) {
     char *username;
@@ -99,7 +99,7 @@ int client_authentication(char *buf) {
         fprintf(stderr,
                 "%sCan't open user database at \"%s\". Wrong path?%s\n", KRED,
                 USERLIST_FILE_PATH, KNRM);
-        exit(EXIT_FAILURE);
+        return FALSE;
     }
 
     while (fgets(data_info, sizeof(data_info), fp) != NULL && strlen(data_info) > 1) {
